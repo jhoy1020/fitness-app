@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, TextInput, Button, SegmentedButtons, Surface, useTheme, Divider, Switch, Portal, Dialog, Searchbar } from 'react-native-paper';
 import { useUser, useWorkout, useThemeMode } from '../context';
-import { ProgressBar } from '../components';
+import { ProgressBar, InfoTooltip, ABBREVIATIONS } from '../components';
 import { soundService } from '../services/SoundService';
 import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
 import { calculate1RM_Epley } from '../utils/formulas';
@@ -36,6 +36,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [age, setAge] = useState('');
   const [bodyFat, setBodyFat] = useState('');
   const [leanMass, setLeanMass] = useState('');
+  const [bmrOverride, setBmrOverride] = useState('');
   const [goalBodyFat, setGoalBodyFat] = useState('');
   const [goalWeight, setGoalWeight] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'other'>('male');
@@ -93,6 +94,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       setAge(userState.profile.age.toString());
       setBodyFat(userState.profile.bodyFatPercent?.toString() || '');
       setLeanMass(userState.profile.leanMass?.toString() || '');
+      setBmrOverride(userState.profile.bmrOverride?.toString() || '');
       setGoalBodyFat(userState.profile.goalBodyFatPercent?.toString() || '');
       setGoalWeight((userState.profile as any).goalWeight?.toString() || '');
       setGender(userState.profile.gender);
@@ -111,6 +113,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       age: parseInt(age, 10) || 0,
       bodyFatPercent: bodyFat ? parseFloat(bodyFat) : undefined,
       leanMass: leanMass ? parseFloat(leanMass) : undefined,
+      bmrOverride: bmrOverride ? parseFloat(bmrOverride) : undefined,
       goalBodyFatPercent: goalBodyFat ? parseFloat(goalBodyFat) : undefined,
       goalWeight: goalWeight ? parseFloat(goalWeight) : undefined,
       gender,
@@ -238,7 +241,10 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       {/* 1RM Records */}
       <Surface style={styles.card} elevation={1}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text variant="titleMedium">🏋️ 1RM Records</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text variant="titleMedium">🏋️ 1RM Records</Text>
+            <InfoTooltip {...ABBREVIATIONS['1RM']} />
+          </View>
           <Button mode="contained-tonal" compact onPress={() => setShow1RMDialog(true)}>
             + Add 1RM
           </Button>
@@ -344,6 +350,23 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           ]}
           style={styles.segmented}
         />
+
+        <Divider style={{ marginVertical: 16 }} />
+
+        <Text variant="labelLarge" style={styles.label}>Measured BMR (Optional)</Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
+          If you know your BMR from a DEXA scan or metabolic test, enter it here to override the calculated value.
+        </Text>
+        <TextInput
+          mode="outlined"
+          label="BMR (calories/day)"
+          value={bmrOverride}
+          onChangeText={setBmrOverride}
+          keyboardType="number-pad"
+          placeholder="e.g., 1850"
+          style={styles.input}
+          right={bmrOverride ? <TextInput.Icon icon="close" onPress={() => setBmrOverride('')} /> : undefined}
+        />
       </Surface>
 
       {/* Training Experience */}
@@ -422,13 +445,22 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               <Text variant="displaySmall" style={{ color: theme.colors.primary }}>
                 {userState.nutrition.bmr}
               </Text>
-              <Text variant="labelMedium">BMR</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text variant="labelMedium">BMR {bmrOverride ? '✓' : ''}</Text>
+                <InfoTooltip {...ABBREVIATIONS.BMR} />
+              </View>
+              {bmrOverride && (
+                <Text variant="labelSmall" style={{ color: theme.colors.outline }}>measured</Text>
+              )}
             </View>
             <View style={styles.resultItem}>
               <Text variant="displaySmall" style={{ color: theme.colors.secondary }}>
                 {userState.nutrition.tdee}
               </Text>
-              <Text variant="labelMedium">TDEE</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text variant="labelMedium">TDEE</Text>
+                <InfoTooltip {...ABBREVIATIONS.TDEE} />
+              </View>
             </View>
             <View style={styles.resultItem}>
               <Text variant="displaySmall" style={{ color: theme.colors.tertiary }}>

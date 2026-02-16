@@ -5,6 +5,7 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Surface, useTheme, SegmentedButtons } from 'react-native-paper';
 import { useMesoCycle } from '../context/MesoCycleContext';
 import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../utils/constants';
+import { InfoTooltip, ABBREVIATIONS } from '../components';
 import type { MuscleGroup, MuscleVolumeTracker } from '../types';
 
 interface VolumeTrackerScreenProps {
@@ -144,15 +145,18 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.outline }]} />
-          <Text variant="labelSmall">MEV (Minimum)</Text>
+          <Text variant="labelSmall">MEV</Text>
+          <InfoTooltip {...ABBREVIATIONS.MEV} size="small" />
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
-          <Text variant="labelSmall">MAV (Optimal)</Text>
+          <Text variant="labelSmall">MAV</Text>
+          <InfoTooltip {...ABBREVIATIONS.MAV} size="small" />
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
-          <Text variant="labelSmall">MRV (Maximum)</Text>
+          <Text variant="labelSmall">MRV</Text>
+          <InfoTooltip {...ABBREVIATIONS.MRV} size="small" />
         </View>
       </View>
 

@@ -2,12 +2,12 @@
 // Sets up providers, navigation, and theme
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme, useWindowDimensions, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Provider as PaperProvider, ActivityIndicator, Text } from 'react-native-paper';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { createBottomTabNavigator, BottomTabBar } from '@react-navigation/bottom-tabs';
+import { Provider as PaperProvider, ActivityIndicator, Text, Surface } from 'react-native-paper';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { lightTheme, darkTheme } from './src/theme';
 import { WorkoutProvider, UserProvider, TimerProvider, MesoCycleProvider, ThemeProvider, useThemeMode } from './src/context';
@@ -51,65 +51,133 @@ type MainTabParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Main Tab Navigator
+// Breakpoint for narrow screens (hamburger menu threshold)
+// Set to 400px to trigger on small phones like iPhone SE
+const NARROW_SCREEN_WIDTH = 400;
+
+// Tab configuration
+const TAB_CONFIG = [
+  { name: 'Home' as const, title: 'Dashboard', icon: '🏠', component: HomeScreen },
+  { name: 'Programs' as const, title: 'Programs', icon: '📝', component: ProgramsScreen },
+  { name: 'History' as const, title: 'History', icon: '📋', component: HistoryScreen },
+  { name: 'Progress' as const, title: 'Progress', icon: '📈', component: ProgressScreen },
+  { name: 'Profile' as const, title: 'Profile', icon: '👤', component: ProfileScreen },
+];
+
+// Hamburger Menu Component for narrow screens
+function HamburgerMenu({ navigation, currentRoute }: { navigation: any; currentRoute: string }) {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <>
+      {/* Menu Button in bottom bar */}
+      <View style={[
+        styles.hamburgerBar, 
+        { paddingBottom: Math.max(insets.bottom, 8) }
+      ]}>
+        <TouchableOpacity
+          style={styles.hamburgerButton}
+          onPress={() => setMenuVisible(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.hamburgerIcon}>☰</Text>
+          <Text style={styles.hamburgerLabel}>Menu</Text>
+        </TouchableOpacity>
+        <Text style={styles.currentScreen}>
+          {TAB_CONFIG.find(t => t.name === currentRoute)?.icon} {TAB_CONFIG.find(t => t.name === currentRoute)?.title}
+        </Text>
+      </View>
+
+      {/* Menu Modal */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable 
+          style={styles.menuOverlay} 
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={[styles.menuSheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+            <View style={styles.menuHandle} />
+            <Text style={styles.menuTitle}>Navigation</Text>
+            {TAB_CONFIG.map((tab) => (
+              <TouchableOpacity
+                key={tab.name}
+                style={[
+                  styles.menuItem,
+                  currentRoute === tab.name && styles.menuItemActive
+                ]}
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate(tab.name);
+                }}
+              >
+                <Text style={styles.menuItemIcon}>{tab.icon}</Text>
+                <Text style={[
+                  styles.menuItemText,
+                  currentRoute === tab.name && styles.menuItemTextActive
+                ]}>
+                  {tab.title}
+                </Text>
+                {currentRoute === tab.name && (
+                  <Text style={styles.menuItemCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+// Main Tab Navigator with responsive layout
 function MainTabs() {
+  const { width } = useWindowDimensions();
+  const isNarrowScreen = width < NARROW_SCREEN_WIDTH;
+  const insets = useSafeAreaInsets();
+
+  // For narrow screens, we'll use a custom tab bar with hamburger menu
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: true,
-        tabBarLabelStyle: { fontSize: 12 },
+        tabBarLabelStyle: { fontSize: 11 },
+        tabBarStyle: isNarrowScreen ? { display: 'none' } : {
+          paddingBottom: Math.max(insets.bottom, 4),
+          paddingTop: 4,
+          height: 56 + Math.max(insets.bottom, 4),
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+          minHeight: 48,
+        },
       }}
+      tabBar={(props) => isNarrowScreen ? (
+        <HamburgerMenu 
+          navigation={props.navigation} 
+          currentRoute={props.state.routes[props.state.index].name}
+        />
+      ) : (
+        <BottomTabBar {...props} />
+      )}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size, color }}>🏠</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Programs"
-        component={ProgramsScreen}
-        options={{
-          title: 'Programs',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size, color }}>📝</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{
-          title: 'History',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size, color }}>📋</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Progress"
-        component={ProgressScreen}
-        options={{
-          title: 'Progress',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size, color }}>📈</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size, color }}>👤</Text>
-          ),
-        }}
-      />
+      {TAB_CONFIG.map((tab) => (
+        <Tab.Screen
+          key={tab.name}
+          name={tab.name}
+          component={tab.component}
+          options={{
+            title: tab.title,
+            tabBarIcon: ({ color, size }) => (
+              <Text style={{ fontSize: size, color }}>{tab.icon}</Text>
+            ),
+          }}
+        />
+      ))}
     </Tab.Navigator>
   );
 }
@@ -264,5 +332,95 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Hamburger menu styles for narrow screens
+  hamburgerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1B2838',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(100, 130, 153, 0.3)',
+    zIndex: 1000,
+    elevation: 10,
+  },
+  hamburgerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    minHeight: 44,
+    minWidth: 80,
+  },
+  hamburgerIcon: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    marginRight: 8,
+  },
+  hamburgerLabel: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  currentScreen: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  menuSheet: {
+    backgroundColor: '#1B2838',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+  },
+  menuHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  menuTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    minHeight: 56,
+  },
+  menuItemActive: {
+    backgroundColor: 'rgba(0, 212, 255, 0.15)',
+  },
+  menuItemIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  menuItemTextActive: {
+    color: '#00D4FF',
+    fontWeight: '600',
+  },
+  menuItemCheck: {
+    fontSize: 18,
+    color: '#00D4FF',
   },
 });

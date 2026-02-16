@@ -109,7 +109,7 @@ export const WeightGraph: React.FC<WeightGraphProps> = ({
 
   if (!chartData || chartData.points.length === 0) {
     return (
-      <Surface style={[styles.emptyContainer, { height }]} elevation={1}>
+      <Surface style={{ justifyContent: 'center', alignItems: 'center', borderRadius: 12, padding: 24, height }} elevation={1}>
         <Text style={{ fontSize: 48 }}>📊</Text>
         <Text variant="bodyLarge" style={{ marginTop: 8 }}>No weight data yet</Text>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
@@ -240,9 +240,9 @@ export const WeightGraph: React.FC<WeightGraphProps> = ({
           <Text variant="headlineMedium" style={styles.weightValue}>
             {chartData.latest.weight} lbs
           </Text>
-          {chartData.latest.bodyFat && (
+          {chartData.latest.bodyFatPercent && (
             <Text variant="labelMedium" style={{ color: theme.colors.tertiary }}>
-              {chartData.latest.bodyFat}% body fat
+              {chartData.latest.bodyFatPercent}% body fat
             </Text>
           )}
         </View>

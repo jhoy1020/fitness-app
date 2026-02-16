@@ -2,7 +2,7 @@
 // 1. Name workout → 2. Add exercises → 3. Tap exercise to log sets → 4. Timer runs during rest
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import {
   Text,
   Button,
@@ -18,6 +18,7 @@ import {
   Chip,
   Switch,
 } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../context/WorkoutContext';
 import { useMesoCycle } from '../context/MesoCycleContext';
 import { useUser } from '../context/UserContext';
@@ -26,6 +27,10 @@ import { soundService } from '../services/SoundService';
 import { calculatePlates, formatPlatesDisplay, getWarmupSets, WarmupSet } from '../utils/plateCalculator';
 import { calculate1RM_Epley } from '../utils/formulas';
 import { getExerciseDemo } from '../data/exerciseVideos';
+import { InfoTooltip, ABBREVIATIONS } from '../components';
+
+// Responsive breakpoint
+const NARROW_SCREEN_WIDTH = 375;
 
 // Types
 interface SetEntry {
@@ -65,6 +70,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   const { state: workoutState, dispatch: workoutDispatch } = useWorkout();
   const { state: mesoState, dispatch: mesoDispatch } = useMesoCycle();
   const { getOneRepMax } = useUser();
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const isNarrowScreen = screenWidth < NARROW_SCREEN_WIDTH;
 
   // Workout state
   const [workoutName, setWorkoutName] = useState('');
@@ -718,7 +726,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 GO!
               </Button>
             ) : (
-              <View style={{ flexDirection: 'row', gap: 4 }}>
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                 {REST_PRESETS.map(seconds => (
                   <TouchableOpacity
                     key={seconds}
@@ -727,9 +735,10 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       styles.restPreset,
                       { backgroundColor: restTarget === seconds ? theme.colors.primary : theme.colors.surfaceVariant }
                     ]}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                   >
                     <Text 
-                      variant="labelSmall" 
+                      variant="labelMedium" 
                       style={{ color: restTarget === seconds ? theme.colors.onPrimary : theme.colors.onSurfaceVariant }}
                     >
                       {seconds >= 60 ? `${seconds / 60}m` : `${seconds}s`}
@@ -924,7 +933,10 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                         <Text style={[styles.setCell, styles.setNumCell]}>Set</Text>
                         <Text style={[styles.setCell, styles.weightCell]}>Weight</Text>
                         <Text style={[styles.setCell, styles.repsCell]}>Reps</Text>
-                        <Text style={[styles.setCell, styles.rirCell]}>RIR</Text>
+                        <View style={{ flex: 0.6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text>RIR</Text>
+                          <InfoTooltip {...ABBREVIATIONS.RIR} size="small" />
+                        </View>
                         <Text style={[styles.setCell, styles.deleteCell]}>{' '}</Text>
                       </View>
                       {exercise.sets.map((set, index) => (
@@ -944,43 +956,50 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     </View>
                   )}
 
-                  {/* Add New Set */}
-                  <View style={styles.addSetRow}>
-                    <TextInput
-                      label="Weight"
-                      value={weight}
-                      onChangeText={setWeight}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      style={styles.setInput}
-                      dense
-                    />
-                    <TextInput
-                      label="Reps"
-                      value={reps}
-                      onChangeText={setReps}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      style={styles.setInput}
-                      dense
-                    />
-                    <TextInput
-                      label="RIR"
-                      value={rir}
-                      onChangeText={setRir}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      style={[styles.setInput, { flex: 0.6 }]}
-                      dense
-                    />
+                  {/* Add New Set - Responsive layout */}
+                  <View style={[
+                    styles.addSetRow, 
+                    isNarrowScreen && styles.addSetRowNarrow
+                  ]}>
+                    <View style={[
+                      styles.inputGroup,
+                      isNarrowScreen && styles.inputGroupNarrow
+                    ]}>
+                      <TextInput
+                        label="Weight"
+                        value={weight}
+                        onChangeText={setWeight}
+                        keyboardType="numeric"
+                        mode="outlined"
+                        style={[styles.setInput, isNarrowScreen && { minWidth: 80 }]}
+                        dense
+                      />
+                      <TextInput
+                        label="Reps"
+                        value={reps}
+                        onChangeText={setReps}
+                        keyboardType="numeric"
+                        mode="outlined"
+                        style={[styles.setInput, isNarrowScreen && { minWidth: 70 }]}
+                        dense
+                      />
+                      <TextInput
+                        label="RIR"
+                        value={rir}
+                        onChangeText={setRir}
+                        keyboardType="numeric"
+                        mode="outlined"
+                        style={[styles.setInput, { flex: isNarrowScreen ? 1 : 0.6 }, isNarrowScreen && { minWidth: 60 }]}
+                        dense
+                      />
+                    </View>
                     <Button
                       mode="contained"
                       onPress={handleLogSet}
                       disabled={!weight || !reps}
-                      compact
-                      style={styles.logButton}
+                      style={[styles.logButton, isNarrowScreen && styles.logButtonNarrow]}
                     >
-                      Log
+                      Log Set
                     </Button>
                   </View>
 
@@ -1024,8 +1043,8 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
         )}
       </ScrollView>
 
-      {/* Bottom Actions */}
-      <Surface style={styles.bottomBar} elevation={3}>
+      {/* Bottom Actions - with safe area insets */}
+      <Surface style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]} elevation={3}>
         <Button
           mode="outlined"
           onPress={() => navigation.navigate('Home')}
@@ -1042,9 +1061,15 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
         </Button>
       </Surface>
 
-      {/* Add Exercise Button */}
+      {/* Add Exercise Button - with safe area offset */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        style={[
+          styles.fab, 
+          { 
+            backgroundColor: theme.colors.primary,
+            bottom: 90 + Math.max(insets.bottom, 0),
+          }
+        ]}
         onPress={() => setShowExercisePicker(true)}
       >
         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>+ Add Exercise</Text>
@@ -1476,11 +1501,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  addSetRowNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
+  },
+  inputGroup: {
+    flexDirection: 'row',
+    flex: 1,
+    gap: 8,
+  },
+  inputGroupNarrow: {
+    width: '100%',
+  },
   setInput: {
     flex: 1,
   },
   logButton: {
     marginTop: 6,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  logButtonNarrow: {
+    width: '100%',
+    marginTop: 8,
   },
   quickActions: {
     marginTop: 12,
@@ -1504,9 +1548,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   restPreset: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 12,
+    minHeight: 44,
+    minWidth: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tipsBox: {
     backgroundColor: 'rgba(0, 212, 255, 0.08)',
@@ -1517,7 +1565,8 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     gap: 12,
     position: 'absolute',
     bottom: 0,
@@ -1531,10 +1580,10 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 16,
-    bottom: 90,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 28,
+    minHeight: 48,
     elevation: 4,
     shadowColor: '#1B2838',
     shadowOffset: { width: 0, height: 2 },

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, SegmentedButtons } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calculate1RM_Epley } from '../utils/formulas';
 import { useMesoCycle } from '../context/MesoCycleContext';
 
@@ -30,6 +31,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
   const theme = useTheme();
   const { workout } = route.params;
   const { state: mesoState, dispatch: mesoDispatch, addSetsToVolume } = useMesoCycle();
+  const insets = useSafeAreaInsets();
 
   // Feedback dialog state
   const [showFeedback, setShowFeedback] = useState(false);
@@ -304,8 +306,8 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
         </Dialog>
       </Portal>
 
-      {/* Actions */}
-      <Surface style={styles.bottomBar} elevation={3}>
+      {/* Actions - with safe area insets */}
+      <Surface style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]} elevation={3}>
         <Button
           mode="outlined"
           onPress={() => navigation.navigate('ActiveWorkout')}
@@ -387,7 +389,8 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     gap: 12,
     position: 'absolute',
     bottom: 0,
@@ -396,6 +399,7 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     flex: 1,
+    minHeight: 48,
   },
   feedbackSection: {
     marginBottom: 20,

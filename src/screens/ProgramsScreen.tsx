@@ -416,8 +416,9 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     marginRight: 8,
-    height: 32,
+    height: 44,
     justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   filterSpacer: {
     width: 16,
