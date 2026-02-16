@@ -52,6 +52,8 @@ interface ExerciseEntry {
   repsMax: number;
   rirTarget: number;
   restSeconds: number;
+  supersetGroupId?: string;
+  supersetOrder?: number;
 }
 
 export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
@@ -82,6 +84,82 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
   const [newRepsMax, setNewRepsMax] = useState('12');
   const [newRir, setNewRir] = useState('2');
   const [newRest, setNewRest] = useState('120');
+
+  // Delete confirmation state
+  const [deleteConfirmDay, setDeleteConfirmDay] = useState<string | null>(null);
+  const [deleteConfirmExercise, setDeleteConfirmExercise] = useState<{ dayId: string; exerciseId: string } | null>(null);
+
+  // Superset state
+  const [supersetMode, setSupersetMode] = useState<{ dayId: string; exerciseId: string } | null>(null);
+
+  // Create a superset between two exercises
+  const handleCreateSuperset = (dayId: string, exercise1Id: string, exercise2Id: string) => {
+    const groupId = `superset-${Date.now()}`;
+    setWorkoutDays(days => days.map(day => {
+      if (day.id !== dayId) return day;
+      return {
+        ...day,
+        exercises: day.exercises.map(ex => {
+          if (ex.id === exercise1Id) {
+            return { ...ex, supersetGroupId: groupId, supersetOrder: 1 };
+          }
+          if (ex.id === exercise2Id) {
+            return { ...ex, supersetGroupId: groupId, supersetOrder: 2 };
+          }
+          return ex;
+        }),
+      };
+    }));
+    setSupersetMode(null);
+  };
+
+  // Add exercise to existing superset
+  const handleAddToSuperset = (dayId: string, exerciseId: string, groupId: string) => {
+    setWorkoutDays(days => days.map(day => {
+      if (day.id !== dayId) return day;
+      const existingInGroup = day.exercises.filter(ex => ex.supersetGroupId === groupId);
+      const maxOrder = Math.max(...existingInGroup.map(ex => ex.supersetOrder || 0), 0);
+      return {
+        ...day,
+        exercises: day.exercises.map(ex => {
+          if (ex.id === exerciseId) {
+            return { ...ex, supersetGroupId: groupId, supersetOrder: maxOrder + 1 };
+          }
+          return ex;
+        }),
+      };
+    }));
+    setSupersetMode(null);
+  };
+
+  // Remove exercise from superset
+  const handleRemoveFromSuperset = (dayId: string, exerciseId: string) => {
+    setWorkoutDays(days => days.map(day => {
+      if (day.id !== dayId) return day;
+      return {
+        ...day,
+        exercises: day.exercises.map(ex => {
+          if (ex.id === exerciseId) {
+            const { supersetGroupId, supersetOrder, ...rest } = ex;
+            return rest as ExerciseEntry;
+          }
+          return ex;
+        }),
+      };
+    }));
+  };
+
+  // Get superset groups for a day
+  const getSupersetGroups = (day: WorkoutDay): Map<string, ExerciseEntry[]> => {
+    const groups = new Map<string, ExerciseEntry[]>();
+    day.exercises.forEach(ex => {
+      if (ex.supersetGroupId) {
+        const existing = groups.get(ex.supersetGroupId) || [];
+        groups.set(ex.supersetGroupId, [...existing, ex].sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)));
+      }
+    });
+    return groups;
+  };
 
   // Filter exercises by search and muscle
   const filteredExercises = EXERCISE_LIBRARY.filter(ex => {
@@ -202,6 +280,8 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
             repsMax: e.repsMax,
             rirTarget: e.rirTarget,
             restSeconds: e.restSeconds,
+            supersetGroupId: e.supersetGroupId,
+            supersetOrder: e.supersetOrder,
           })),
         })),
       },
@@ -318,7 +398,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                     style={styles.dayNameInput}
                     dense
                   />
-                  <TouchableOpacity onPress={() => handleRemoveDay(day.id)}>
+                  <TouchableOpacity onPress={() => setDeleteConfirmDay(day.id)}>
                     <Text style={{ color: theme.colors.error, fontSize: 18 }}>✕</Text>
                   </TouchableOpacity>
                 </View>
@@ -328,19 +408,113 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                     No exercises yet
                   </Text>
                 ) : (
-                  day.exercises.map((exercise, exIndex) => (
-                    <View key={exercise.id} style={styles.exerciseRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text variant="bodyMedium">{exercise.exerciseName}</Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                          {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps @ RIR {exercise.rirTarget}
-                        </Text>
-                      </View>
-                      <TouchableOpacity onPress={() => handleRemoveExercise(day.id, exercise.id)}>
-                        <Text style={{ color: theme.colors.error }}>✕</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))
+                  (() => {
+                    const supersetGroups = getSupersetGroups(day);
+                    const renderedGroupIds = new Set<string>();
+                    
+                    return day.exercises.map((exercise, exIndex) => {
+                      // If this exercise is in a superset and we haven't rendered that group yet
+                      if (exercise.supersetGroupId && !renderedGroupIds.has(exercise.supersetGroupId)) {
+                        renderedGroupIds.add(exercise.supersetGroupId);
+                        const groupExercises = supersetGroups.get(exercise.supersetGroupId) || [];
+                        
+                        return (
+                          <Surface 
+                            key={exercise.supersetGroupId} 
+                            style={[styles.supersetGroup, { borderColor: theme.colors.primary }]} 
+                            elevation={0}
+                          >
+                            <View style={styles.supersetHeader}>
+                              <Text variant="labelMedium" style={{ color: theme.colors.primary }}>
+                                🔗 SUPERSET ({groupExercises.length} exercises)
+                              </Text>
+                              <TouchableOpacity onPress={() => {
+                                // Unlink all exercises in this superset
+                                groupExercises.forEach(ex => handleRemoveFromSuperset(day.id, ex.id));
+                              }}>
+                                <Text variant="labelSmall" style={{ color: theme.colors.error }}>Unlink All</Text>
+                              </TouchableOpacity>
+                            </View>
+                            {groupExercises.map((groupEx, gIdx) => (
+                              <View key={groupEx.id} style={[styles.exerciseRow, { marginLeft: 8 }]}>
+                                <View style={{ flex: 1 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Text style={{ 
+                                      backgroundColor: theme.colors.primary, 
+                                      color: theme.colors.onPrimary,
+                                      width: 20, height: 20, 
+                                      borderRadius: 10, 
+                                      textAlign: 'center', 
+                                      lineHeight: 20,
+                                      fontSize: 12,
+                                    }}>
+                                      {gIdx + 1}
+                                    </Text>
+                                    <Text variant="bodyMedium">{groupEx.exerciseName}</Text>
+                                  </View>
+                                  <Text variant="bodySmall" style={{ color: theme.colors.outline, marginLeft: 28 }}>
+                                    {groupEx.sets} sets × {groupEx.repsMin}-{groupEx.repsMax} reps @ RIR {groupEx.rirTarget}
+                                  </Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setDeleteConfirmExercise({ dayId: day.id, exerciseId: groupEx.id })}>
+                                  <Text style={{ color: theme.colors.error }}>✕</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </Surface>
+                        );
+                      }
+                      
+                      // Skip exercises that are part of a superset we already rendered
+                      if (exercise.supersetGroupId) return null;
+                      
+                      // Regular exercise (not in superset)
+                      const isLinkingMode = supersetMode?.dayId === day.id;
+                      const isSourceExercise = supersetMode?.exerciseId === exercise.id;
+                      
+                      return (
+                        <View key={exercise.id} style={[
+                          styles.exerciseRow,
+                          isLinkingMode && !isSourceExercise && { borderColor: theme.colors.primary, borderWidth: 2, borderStyle: 'dashed' }
+                        ]}>
+                          <View style={{ flex: 1 }}>
+                            <Text variant="bodyMedium">{exercise.exerciseName}</Text>
+                            <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                              {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps @ RIR {exercise.rirTarget}
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            {/* Superset link button */}
+                            {!isLinkingMode ? (
+                              <TouchableOpacity 
+                                onPress={() => setSupersetMode({ dayId: day.id, exerciseId: exercise.id })}
+                                style={{ padding: 4 }}
+                              >
+                                <Text style={{ fontSize: 16 }}>🔗</Text>
+                              </TouchableOpacity>
+                            ) : isSourceExercise ? (
+                              <TouchableOpacity 
+                                onPress={() => setSupersetMode(null)}
+                                style={{ padding: 4 }}
+                              >
+                                <Text style={{ color: theme.colors.error, fontSize: 12 }}>Cancel</Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <TouchableOpacity 
+                                onPress={() => handleCreateSuperset(day.id, supersetMode.exerciseId, exercise.id)}
+                                style={{ padding: 4, backgroundColor: theme.colors.primaryContainer, borderRadius: 4 }}
+                              >
+                                <Text style={{ color: theme.colors.primary, fontSize: 12 }}>Link</Text>
+                              </TouchableOpacity>
+                            )}
+                            <TouchableOpacity onPress={() => setDeleteConfirmExercise({ dayId: day.id, exerciseId: exercise.id })}>
+                              <Text style={{ color: theme.colors.error }}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    });
+                  })()
                 )}
 
                 <Button 
@@ -532,6 +706,54 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
             </Button>
           </Dialog.Actions>
         </Dialog>
+
+        {/* Delete Day Confirmation Dialog */}
+        <Dialog visible={!!deleteConfirmDay} onDismiss={() => setDeleteConfirmDay(null)}>
+          <Dialog.Title>Delete Workout Day?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to delete this workout day? All exercises in this day will be removed.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmDay(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmDay) {
+                  handleRemoveDay(deleteConfirmDay);
+                  setDeleteConfirmDay(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        {/* Delete Exercise Confirmation Dialog */}
+        <Dialog visible={!!deleteConfirmExercise} onDismiss={() => setDeleteConfirmExercise(null)}>
+          <Dialog.Title>Remove Exercise?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to remove this exercise from the workout day?
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmExercise(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmExercise) {
+                  handleRemoveExercise(deleteConfirmExercise.dayId, deleteConfirmExercise.exerciseId);
+                  setDeleteConfirmExercise(null);
+                }
+              }}
+            >
+              Remove
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
       </Portal>
     </View>
   );
@@ -606,6 +828,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(100,130,153,0.2)',
+    borderRadius: 4,
+  },
+  supersetGroup: {
+    borderWidth: 2,
+    borderRadius: 8,
+    padding: 8,
+    marginVertical: 4,
+  },
+  supersetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(100,130,153,0.2)',
   },

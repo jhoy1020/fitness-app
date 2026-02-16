@@ -439,6 +439,102 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
       ],
     },
   },
+
+  // ============================================
+  // SUPERSET / TIME-EFFICIENT PROGRAMS
+  // ============================================
+  {
+    id: 'superset-upper-lower-4x',
+    name: 'Superset Upper/Lower 4x/Week',
+    description: 'Time-efficient program using supersets to cut workout time in half. Pairs antagonist muscles for maximum efficiency without sacrificing gains.',
+    difficulty: 'intermediate',
+    durationWeeks: 6,
+    daysPerWeek: 4,
+    split: 'Upper/Lower',
+    goals: ['hypertrophy', 'general_fitness'],
+    musclePriorities: normalPriorities(),
+    weeklyFrequency: defaultFrequency(2),
+    startingVolumeMultiplier: 1.1,
+    volumeProgressionPerWeek: 2,
+    tags: ['intermediate', 'upper-lower', '4-days', 'superset', 'time-efficient'],
+    weekTemplate: {
+      days: [
+        {
+          dayNumber: 1,
+          name: 'Upper A (Supersets)',
+          muscleGroups: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
+          exercises: [
+            // Superset 1: Chest + Back (antagonist pairing)
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-a-ss1', supersetOrder: 0, notes: 'Superset with Barbell Row' },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, supersetGroupId: 'upper-a-ss1', supersetOrder: 1, notes: 'Superset with Bench Press' },
+            // Superset 2: Incline Press + Lat Pulldown
+            { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-a-ss2', supersetOrder: 0, notes: 'Superset with Lat Pulldown' },
+            { muscleGroup: 'back', exerciseName: 'Lat Pulldown', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'upper-a-ss2', supersetOrder: 1, notes: 'Superset with Incline Press' },
+            // Superset 3: Biceps + Triceps
+            { muscleGroup: 'biceps', exerciseName: 'Barbell Curl', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 15, supersetGroupId: 'upper-a-ss3', supersetOrder: 0, notes: 'Superset with Triceps' },
+            { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 60, supersetGroupId: 'upper-a-ss3', supersetOrder: 1, notes: 'Superset with Curls' },
+            // Standalone
+            { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 4, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 60 },
+          ],
+        },
+        {
+          dayNumber: 2,
+          name: 'Lower A (Supersets)',
+          muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves', 'core'],
+          exercises: [
+            // Heavy compound first - no superset
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            // Superset: Leg Press + RDL
+            { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'lower-a-ss1', supersetOrder: 0, notes: 'Superset with RDL' },
+            { muscleGroup: 'hamstrings', exerciseName: 'Romanian Deadlift', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'lower-a-ss1', supersetOrder: 1, notes: 'Superset with Leg Press' },
+            // Superset: Leg Extension + Leg Curl
+            { muscleGroup: 'quadriceps', exerciseName: 'Leg Extension', category: 'isolation', sets: 3, repsMin: 12, repsMax: 15, rirTarget: 1, restSeconds: 15, supersetGroupId: 'lower-a-ss2', supersetOrder: 0, notes: 'Superset with Leg Curl' },
+            { muscleGroup: 'hamstrings', exerciseName: 'Lying Leg Curl', category: 'isolation', sets: 3, repsMin: 12, repsMax: 15, rirTarget: 1, restSeconds: 60, supersetGroupId: 'lower-a-ss2', supersetOrder: 1, notes: 'Superset with Leg Extension' },
+            // Superset: Calves + Core
+            { muscleGroup: 'calves', exerciseName: 'Standing Calf Raise', category: 'isolation', sets: 4, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 15, supersetGroupId: 'lower-a-ss3', supersetOrder: 0, notes: 'Superset with Core' },
+            { muscleGroup: 'core', exerciseName: 'Cable Crunch', category: 'isolation', sets: 3, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 45, supersetGroupId: 'lower-a-ss3', supersetOrder: 1, notes: 'Superset with Calves' },
+          ],
+        },
+        {
+          dayNumber: 3,
+          name: 'Upper B (Supersets)',
+          muscleGroups: ['back', 'chest', 'shoulders', 'biceps', 'triceps'],
+          exercises: [
+            // Superset 1: Pull-ups + OHP
+            { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 4, repsMin: 6, repsMax: 12, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-b-ss1', supersetOrder: 0, notes: 'Superset with OHP' },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, supersetGroupId: 'upper-b-ss1', supersetOrder: 1, notes: 'Superset with Pull-ups' },
+            // Superset 2: Cable Row + Dumbbell Press
+            { muscleGroup: 'back', exerciseName: 'Seated Cable Row', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-b-ss2', supersetOrder: 0, notes: 'Superset with DB Press' },
+            { muscleGroup: 'chest', exerciseName: 'Dumbbell Bench Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'upper-b-ss2', supersetOrder: 1, notes: 'Superset with Row' },
+            // Superset 3: Face Pulls + Lateral Raises
+            { muscleGroup: 'shoulders', exerciseName: 'Face Pulls', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 15, supersetGroupId: 'upper-b-ss3', supersetOrder: 0, notes: 'Superset with Laterals' },
+            { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 3, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 60, supersetGroupId: 'upper-b-ss3', supersetOrder: 1, notes: 'Superset with Face Pulls' },
+            // Superset 4: Hammer Curls + Overhead Tricep
+            { muscleGroup: 'biceps', exerciseName: 'Hammer Curls', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 15, supersetGroupId: 'upper-b-ss4', supersetOrder: 0, notes: 'Superset with Tricep Ext' },
+            { muscleGroup: 'triceps', exerciseName: 'Overhead Tricep Extension', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 60, supersetGroupId: 'upper-b-ss4', supersetOrder: 1, notes: 'Superset with Hammer Curls' },
+          ],
+        },
+        {
+          dayNumber: 4,
+          name: 'Lower B (Supersets)',
+          muscleGroups: ['hamstrings', 'glutes', 'quadriceps', 'calves', 'core'],
+          exercises: [
+            // Heavy compound first
+            { muscleGroup: 'hamstrings', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 4, repsMin: 5, repsMax: 8, rirTarget: 2, restSeconds: 180 },
+            // Superset: Split Squat + Hip Thrust
+            { muscleGroup: 'quadriceps', exerciseName: 'Bulgarian Split Squat', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'lower-b-ss1', supersetOrder: 0, notes: 'Superset with Hip Thrust' },
+            { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'lower-b-ss1', supersetOrder: 1, notes: 'Superset with Split Squat' },
+            // Superset: Good Morning + Walking Lunge
+            { muscleGroup: 'hamstrings', exerciseName: 'Good Morning', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'lower-b-ss2', supersetOrder: 0, notes: 'Superset with Lunges' },
+            { muscleGroup: 'glutes', exerciseName: 'Walking Lunge', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'lower-b-ss2', supersetOrder: 1, notes: 'Superset with Good Mornings' },
+            // Superset: Calf + Core
+            { muscleGroup: 'calves', exerciseName: 'Seated Calf Raise', category: 'isolation', sets: 4, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 15, supersetGroupId: 'lower-b-ss3', supersetOrder: 0, notes: 'Superset with Core' },
+            { muscleGroup: 'core', exerciseName: 'Hanging Leg Raise', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 45, supersetGroupId: 'lower-b-ss3', supersetOrder: 1, notes: 'Superset with Calves' },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default TRAINING_PROGRAMS;

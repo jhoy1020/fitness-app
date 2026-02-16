@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { Storage } from '../utils/storage';
 import type {
   Workout,
   WorkoutSet,
@@ -140,13 +141,11 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
       };
 
     case 'COMPLETE_WORKOUT':
-      // Save workout to history and persist to localStorage
+      // Save workout to history and persist to storage
       const newHistory = [action.payload, ...state.workoutHistory];
-      try {
-        localStorage.setItem('fitness_workout_history', JSON.stringify(newHistory));
-      } catch (e) {
+      Storage.setItem('fitness_workout_history', JSON.stringify(newHistory)).catch(e => {
         console.error('Failed to save workout history:', e);
-      }
+      });
       return {
         ...state,
         activeWorkout: null,
@@ -156,11 +155,9 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
 
     case 'DELETE_WORKOUT':
       const filteredHistory = state.workoutHistory.filter(w => w.id !== action.payload);
-      try {
-        localStorage.setItem('fitness_workout_history', JSON.stringify(filteredHistory));
-      } catch (e) {
+      Storage.setItem('fitness_workout_history', JSON.stringify(filteredHistory)).catch(e => {
         console.error('Failed to save workout history:', e);
-      }
+      });
       return {
         ...state,
         workoutHistory: filteredHistory,
@@ -170,11 +167,9 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
       const updatedHistory = state.workoutHistory.map(w => 
         w.id === action.payload.id ? { ...w, ...action.payload.updates } : w
       );
-      try {
-        localStorage.setItem('fitness_workout_history', JSON.stringify(updatedHistory));
-      } catch (e) {
+      Storage.setItem('fitness_workout_history', JSON.stringify(updatedHistory)).catch(e => {
         console.error('Failed to save workout history:', e);
-      }
+      });
       return {
         ...state,
         workoutHistory: updatedHistory,
@@ -213,18 +208,21 @@ const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 export function WorkoutProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(workoutReducer, initialState);
 
-  // Load workout history from localStorage on mount
+  // Load workout history from storage on mount
   useEffect(() => {
-    try {
-      const savedHistory = localStorage.getItem('fitness_workout_history');
-      if (savedHistory) {
-        const history = JSON.parse(savedHistory);
-        dispatch({ type: 'LOAD_HISTORY', payload: history });
+    const loadWorkoutHistory = async () => {
+      try {
+        const savedHistory = await Storage.getItem('fitness_workout_history');
+        if (savedHistory) {
+          const history = JSON.parse(savedHistory);
+          dispatch({ type: 'LOAD_HISTORY', payload: history });
+        }
+      } catch (e) {
+        console.error('Failed to load workout history:', e);
       }
-    } catch (e) {
-      console.error('Failed to load workout history:', e);
-    }
-    loadTemplates();
+      loadTemplates();
+    };
+    loadWorkoutHistory();
   }, []);
 
   const startWorkout = useCallback(async (name: string, templateId?: string) => {

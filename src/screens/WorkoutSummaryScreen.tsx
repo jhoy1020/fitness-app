@@ -1,11 +1,25 @@
 // Workout Summary Screen - Shows after completing a workout
 
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calculate1RM_Epley } from '../utils/formulas';
 import { useMesoCycle } from '../context/MesoCycleContext';
+
+// Motivational messages
+const MOTIVATIONAL_MESSAGES = [
+  { emoji: '💪', title: 'Beast Mode Activated!', message: 'You crushed it! Every rep brings you closer to your goals.' },
+  { emoji: '🔥', title: 'On Fire!', message: 'Another workout in the books. Champions are made in the gym!' },
+  { emoji: '🏆', title: 'Winner\'s Mindset!', message: 'Showing up is half the battle. You\'re already ahead of most people!' },
+  { emoji: '⚡', title: 'Powered Up!', message: 'Feel that? That\'s your body getting stronger. Keep it going!' },
+  { emoji: '🚀', title: 'Gains Incoming!', message: 'Your future self is thanking you right now. Great work!' },
+  { emoji: '💎', title: 'Diamond in the Making!', message: 'Pressure creates diamonds. You\'re forging greatness!' },
+  { emoji: '🎯', title: 'Goals Crushed!', message: 'One step closer to the best version of yourself!' },
+  { emoji: '👊', title: 'Unstoppable!', message: 'Nothing can hold you back. You\'re on the path to greatness!' },
+  { emoji: '🌟', title: 'Shining Star!', message: 'Your dedication is inspiring. Keep pushing those limits!' },
+  { emoji: '🦁', title: 'Lion Heart!', message: 'You have the heart of a warrior. Rest up and come back stronger!' },
+];
 
 interface WorkoutSummaryScreenProps {
   navigation: any;
@@ -32,6 +46,28 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
   const { workout } = route.params;
   const { state: mesoState, dispatch: mesoDispatch, addSetsToVolume } = useMesoCycle();
   const insets = useSafeAreaInsets();
+
+  // Motivational popup state
+  const [showMotivation, setShowMotivation] = useState(true);
+  const scaleAnim = useMemo(() => new Animated.Value(0), []);
+  
+  // Random motivational message
+  const motivation = useMemo(() => 
+    MOTIVATIONAL_MESSAGES[Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length)],
+    []
+  );
+
+  // Animate the popup on mount
+  useEffect(() => {
+    if (showMotivation) {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showMotivation]);
 
   // Feedback dialog state
   const [showFeedback, setShowFeedback] = useState(false);
@@ -301,6 +337,74 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
               }}
             >
               Submit
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Motivational Popup */}
+      <Portal>
+        <Dialog 
+          visible={showMotivation} 
+          onDismiss={() => setShowMotivation(false)}
+          style={{ backgroundColor: theme.colors.primaryContainer }}
+        >
+          <View style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
+            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+              <Text style={{ fontSize: 80, textAlign: 'center', marginBottom: 16 }}>
+                {motivation.emoji}
+              </Text>
+            </Animated.View>
+            <Text 
+              variant="headlineMedium" 
+              style={{ color: theme.colors.onPrimaryContainer, textAlign: 'center', marginBottom: 12, fontWeight: 'bold' }}
+            >
+              {motivation.title}
+            </Text>
+            <Text 
+              variant="bodyLarge" 
+              style={{ color: theme.colors.onPrimaryContainer, textAlign: 'center', lineHeight: 24 }}
+            >
+              {motivation.message}
+            </Text>
+            
+            {/* Workout stats teaser */}
+            <View style={{ 
+              flexDirection: 'row', 
+              justifyContent: 'space-around', 
+              width: '100%', 
+              marginTop: 24,
+              paddingTop: 16,
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.outline + '40',
+            }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                  {totalSets}
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onPrimaryContainer }}>Sets</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                  {totalReps}
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onPrimaryContainer }}>Reps</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                  {Math.round(totalVolume / 1000)}k
+                </Text>
+                <Text variant="labelSmall" style={{ color: theme.colors.onPrimaryContainer }}>Volume</Text>
+              </View>
+            </View>
+          </View>
+          <Dialog.Actions style={{ justifyContent: 'center', paddingBottom: 16 }}>
+            <Button 
+              mode="contained" 
+              onPress={() => setShowMotivation(false)}
+              style={{ paddingHorizontal: 32 }}
+            >
+              Let's Go! 🚀
             </Button>
           </Dialog.Actions>
         </Dialog>

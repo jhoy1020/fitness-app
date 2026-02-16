@@ -145,6 +145,15 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: true,
+        headerStyle: {
+          height: 56,
+        },
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        headerTitleAlign: 'left',
+        headerStatusBarHeight: 0,
         tabBarLabelStyle: { fontSize: 11 },
         tabBarStyle: isNarrowScreen ? { display: 'none' } : {
           paddingBottom: Math.max(insets.bottom, 4),
@@ -185,7 +194,19 @@ function MainTabs() {
 // Root Stack Navigator
 function RootNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          height: 56,
+        },
+        headerTitleStyle: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        headerTitleAlign: 'left',
+        headerStatusBarHeight: 0,
+      }}
+    >
       <Stack.Screen
         name="Main"
         component={MainTabs}

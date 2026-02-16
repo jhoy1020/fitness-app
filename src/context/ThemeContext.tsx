@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
+import { Storage } from '../utils/storage';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -17,33 +18,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Load saved preference
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('theme');
-      if (saved) {
-        setIsDark(saved === 'dark');
-      } else {
-        setIsDark(systemColorScheme === 'dark');
+    const loadTheme = async () => {
+      try {
+        const saved = await Storage.getItem('theme');
+        if (saved) {
+          setIsDark(saved === 'dark');
+        } else {
+          setIsDark(systemColorScheme === 'dark');
+        }
+      } catch (e) {
+        console.log('Could not load theme preference');
       }
-    } catch (e) {
-      console.log('Could not load theme preference');
-    }
+    };
+    loadTheme();
   }, []);
 
   const toggleTheme = () => {
     setIsDark(prev => {
       const newValue = !prev;
-      try {
-        localStorage.setItem('theme', newValue ? 'dark' : 'light');
-      } catch (e) {}
+      Storage.setItem('theme', newValue ? 'dark' : 'light').catch(() => {});
       return newValue;
     });
   };
 
   const setTheme = (dark: boolean) => {
     setIsDark(dark);
-    try {
-      localStorage.setItem('theme', dark ? 'dark' : 'light');
-    } catch (e) {}
+    Storage.setItem('theme', dark ? 'dark' : 'light').catch(() => {});
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { Storage } from '../utils/storage';
 import type {
   UserProfile,
   ExerciseGoal,
@@ -156,16 +157,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     loadOneRepMaxRecords();
   }, []);
 
-  // Persist 1RM records to localStorage
+  // Persist 1RM records to storage
   useEffect(() => {
     if (state.oneRepMaxRecords.length > 0) {
-      localStorage.setItem(ONE_REP_MAX_KEY, JSON.stringify(state.oneRepMaxRecords));
+      Storage.setItem(ONE_REP_MAX_KEY, JSON.stringify(state.oneRepMaxRecords)).catch(e => {
+        console.error('Failed to save 1RM records:', e);
+      });
     }
   }, [state.oneRepMaxRecords]);
 
-  const loadOneRepMaxRecords = useCallback(() => {
+  const loadOneRepMaxRecords = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(ONE_REP_MAX_KEY);
+      const stored = await Storage.getItem(ONE_REP_MAX_KEY);
       if (stored) {
         const records = JSON.parse(stored) as OneRepMaxRecord[];
         dispatch({ type: 'SET_ONE_REP_MAX_RECORDS', payload: records });
@@ -175,9 +178,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loadWeightHistory = useCallback(() => {
+  const loadWeightHistory = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(WEIGHT_HISTORY_KEY);
+      const stored = await Storage.getItem(WEIGHT_HISTORY_KEY);
       if (stored) {
         const history = JSON.parse(stored) as BodyMeasurement[];
         dispatch({ type: 'SET_WEIGHT_HISTORY', payload: history });
@@ -187,7 +190,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const addWeightEntry = useCallback((weight: number, bodyFatPercent?: number) => {
+  const addWeightEntry = useCallback(async (weight: number, bodyFatPercent?: number) => {
     const entry: BodyMeasurement = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
@@ -198,12 +201,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     dispatch({ type: 'ADD_WEIGHT_ENTRY', payload: entry });
     
-    // Save to localStorage
+    // Save to storage
     try {
-      const stored = localStorage.getItem(WEIGHT_HISTORY_KEY);
+      const stored = await Storage.getItem(WEIGHT_HISTORY_KEY);
       const history = stored ? JSON.parse(stored) : [];
       history.push(entry);
-      localStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(history));
+      await Storage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(history));
     } catch (e) {
       console.error('Failed to save weight entry:', e);
     }

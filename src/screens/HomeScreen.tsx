@@ -59,6 +59,8 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   
   // Delete confirmation state
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null);
+  const [deleteConfirmSet, setDeleteConfirmSet] = useState<string | null>(null);
+  const [deleteConfirmNewSet, setDeleteConfirmNewSet] = useState<string | null>(null);
   
   // Program completion modal state
   const [showProgramComplete, setShowProgramComplete] = useState(false);
@@ -925,7 +927,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       placeholder="reps"
                     />
                     <TouchableOpacity 
-                      onPress={() => handleDeleteSet(set.id)}
+                      onPress={() => setDeleteConfirmSet(set.id)}
                       style={{ padding: 8 }}
                     >
                       <Text style={{ color: theme.colors.error }}>✕</Text>
@@ -1074,7 +1076,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       {set.weight} × {set.reps}
                     </Text>
                     <TouchableOpacity 
-                      onPress={() => handleDeleteNewWorkoutSet(set.id)}
+                      onPress={() => setDeleteConfirmNewSet(set.id)}
                       style={{ padding: 8 }}
                     >
                       <Text style={{ color: theme.colors.error }}>✕</Text>
@@ -1283,6 +1285,58 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               }}
             >
               Start New Program
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Delete Set Confirmation Dialog */}
+      <Portal>
+        <Dialog visible={!!deleteConfirmSet} onDismiss={() => setDeleteConfirmSet(null)}>
+          <Dialog.Title>Delete Set?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to delete this set?
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmSet(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmSet) {
+                  handleDeleteSet(deleteConfirmSet);
+                  setDeleteConfirmSet(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Delete New Workout Set Confirmation Dialog */}
+      <Portal>
+        <Dialog visible={!!deleteConfirmNewSet} onDismiss={() => setDeleteConfirmNewSet(null)}>
+          <Dialog.Title>Delete Set?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to delete this set?
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmNewSet(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmNewSet) {
+                  handleDeleteNewWorkoutSet(deleteConfirmNewSet);
+                  setDeleteConfirmNewSet(null);
+                }
+              }}
+            >
+              Delete
             </Button>
           </Dialog.Actions>
         </Dialog>

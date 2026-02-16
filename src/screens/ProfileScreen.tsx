@@ -29,6 +29,8 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [orm1RMWeight, setOrm1RMWeight] = useState('');
   const [orm1RMReps, setOrm1RMReps] = useState('1');
   const [orm1RMMethod, setOrm1RMMethod] = useState<'tested' | 'calculated'>('tested');
+  const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
+  const [deleteConfirmRecord, setDeleteConfirmRecord] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [weight, setWeight] = useState('');
@@ -245,7 +247,10 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             <Text variant="titleMedium">🏋️ 1RM Records</Text>
             <InfoTooltip {...ABBREVIATIONS['1RM']} />
           </View>
-          <Button mode="contained-tonal" compact onPress={() => setShow1RMDialog(true)}>
+          <Button mode="contained-tonal" compact onPress={() => {
+            setShow1RMDialog(true);
+            setShowExerciseDropdown(false);
+          }}>
             + Add 1RM
           </Button>
         </View>
@@ -286,7 +291,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                   </Text>
                 </View>
                 <TouchableOpacity 
-                  onPress={() => deleteOneRepMax(record.id)}
+                  onPress={() => setDeleteConfirmRecord(record.id)}
                   style={{ marginLeft: 12, padding: 4 }}
                 >
                   <Text style={{ color: theme.colors.error }}>✕</Text>
@@ -528,11 +533,13 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               onChangeText={(text) => {
                 setOrm1RMSearch(text);
                 setOrm1RMExercise(text);
+                setShowExerciseDropdown(true);
               }}
+              onFocus={() => setShowExerciseDropdown(true)}
               style={{ marginBottom: 8 }}
             />
             
-            {orm1RMSearch.length > 0 && (
+            {showExerciseDropdown && orm1RMSearch.length > 0 && (
               <View style={{ maxHeight: 120, marginBottom: 12 }}>
                 <ScrollView nestedScrollEnabled>
                   {EXERCISE_LIBRARY
@@ -544,6 +551,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                         onPress={() => {
                           setOrm1RMExercise(ex.name);
                           setOrm1RMSearch(ex.name);
+                          setShowExerciseDropdown(false);
                         }}
                         style={{ padding: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.outline }}
                       >
@@ -628,6 +636,30 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               disabled={!orm1RMExercise || !orm1RMWeight}
             >
               Save
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog visible={!!deleteConfirmRecord} onDismiss={() => setDeleteConfirmRecord(null)}>
+          <Dialog.Title>Delete 1RM Record?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to delete this 1RM record? This action cannot be undone.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmRecord(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmRecord) {
+                  deleteOneRepMax(deleteConfirmRecord);
+                  setDeleteConfirmRecord(null);
+                }
+              }}
+            >
+              Delete
             </Button>
           </Dialog.Actions>
         </Dialog>

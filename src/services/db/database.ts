@@ -2,6 +2,7 @@
 // This module provides an abstraction layer that can be swapped for cloud storage later
 
 import { Platform } from 'react-native';
+import { Storage } from '../../utils/storage';
 import type {
   Exercise,
   Workout,
@@ -41,29 +42,21 @@ let memoryStore: {
 
 // Database initialization
 export async function initDatabase(): Promise<void> {
-  if (isWeb) {
-    // Load from localStorage if available
-    const saved = localStorage.getItem('fitness_app_data');
-    if (saved) {
-      try {
-        memoryStore = JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse saved data:', e);
-      }
+  // Load from storage if available
+  const saved = await Storage.getItem('fitness_app_data');
+  if (saved) {
+    try {
+      memoryStore = JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse saved data:', e);
     }
-    console.log('Web database initialized (in-memory)');
-  } else {
-    // SQLite initialization for native
-    // This would use react-native-sqlite-storage
-    console.log('Native SQLite database initialized');
   }
+  console.log('Database initialized');
 }
 
-// Save to localStorage for web
-function persistWebData(): void {
-  if (isWeb) {
-    localStorage.setItem('fitness_app_data', JSON.stringify(memoryStore));
-  }
+// Save to storage
+async function persistData(): Promise<void> {
+  await Storage.setItem('fitness_app_data', JSON.stringify(memoryStore));
 }
 
 // ============ EXERCISES ============
@@ -88,7 +81,7 @@ export async function createExercise(exercise: Omit<Exercise, 'id' | 'createdAt'
     updatedAt: toISODate(),
   };
   memoryStore.exercises.push(newExercise);
-  persistWebData();
+  await persistData();
   return newExercise;
 }
 
@@ -101,7 +94,7 @@ export async function updateExercise(id: string, updates: Partial<Exercise>): Pr
     ...updates,
     updatedAt: toISODate(),
   };
-  persistWebData();
+  await persistData();
   return memoryStore.exercises[index];
 }
 
@@ -110,7 +103,7 @@ export async function deleteExercise(id: string): Promise<boolean> {
   if (index === -1) return false;
   
   memoryStore.exercises.splice(index, 1);
-  persistWebData();
+  await persistData();
   return true;
 }
 
@@ -148,7 +141,7 @@ export async function createWorkout(workout: Omit<Workout, 'id' | 'createdAt' | 
     updatedAt: toISODate(),
   };
   memoryStore.workouts.push(newWorkout);
-  persistWebData();
+  await persistData();
   return newWorkout;
 }
 
@@ -161,7 +154,7 @@ export async function updateWorkout(id: string, updates: Partial<Workout>): Prom
     ...updates,
     updatedAt: toISODate(),
   };
-  persistWebData();
+  await persistData();
   return memoryStore.workouts[index];
 }
 
@@ -172,7 +165,7 @@ export async function deleteWorkout(id: string): Promise<boolean> {
   // Also delete associated sets
   memoryStore.workoutSets = memoryStore.workoutSets.filter(s => s.workoutId !== id);
   memoryStore.workouts.splice(index, 1);
-  persistWebData();
+  await persistData();
   return true;
 }
 
@@ -199,7 +192,7 @@ export async function createWorkoutSet(set: Omit<WorkoutSet, 'id' | 'createdAt'>
     createdAt: toISODate(),
   };
   memoryStore.workoutSets.push(newSet);
-  persistWebData();
+  await persistData();
   return newSet;
 }
 
@@ -211,7 +204,7 @@ export async function updateWorkoutSet(id: string, updates: Partial<WorkoutSet>)
     ...memoryStore.workoutSets[index],
     ...updates,
   };
-  persistWebData();
+  await persistData();
   return memoryStore.workoutSets[index];
 }
 
@@ -220,7 +213,7 @@ export async function deleteWorkoutSet(id: string): Promise<boolean> {
   if (index === -1) return false;
   
   memoryStore.workoutSets.splice(index, 1);
-  persistWebData();
+  await persistData();
   return true;
 }
 
@@ -242,7 +235,7 @@ export async function createTemplate(template: Omit<WorkoutTemplate, 'id' | 'cre
     updatedAt: toISODate(),
   };
   memoryStore.templates.push(newTemplate);
-  persistWebData();
+  await persistData();
   return newTemplate;
 }
 
@@ -255,7 +248,7 @@ export async function updateTemplate(id: string, updates: Partial<WorkoutTemplat
     ...updates,
     updatedAt: toISODate(),
   };
-  persistWebData();
+  await persistData();
   return memoryStore.templates[index];
 }
 
@@ -266,7 +259,7 @@ export async function deleteTemplate(id: string): Promise<boolean> {
   // Also delete associated template exercises
   memoryStore.templateExercises = memoryStore.templateExercises.filter(te => te.templateId !== id);
   memoryStore.templates.splice(index, 1);
-  persistWebData();
+  await persistData();
   return true;
 }
 
@@ -284,7 +277,7 @@ export async function createTemplateExercise(te: Omit<TemplateExercise, 'id'>): 
     id: generateUUID(),
   };
   memoryStore.templateExercises.push(newTE);
-  persistWebData();
+  await persistData();
   return newTE;
 }
 
@@ -296,7 +289,7 @@ export async function updateTemplateExercise(id: string, updates: Partial<Templa
     ...memoryStore.templateExercises[index],
     ...updates,
   };
-  persistWebData();
+  await persistData();
   return memoryStore.templateExercises[index];
 }
 
@@ -305,7 +298,7 @@ export async function deleteTemplateExercise(id: string): Promise<boolean> {
   if (index === -1) return false;
   
   memoryStore.templateExercises.splice(index, 1);
-  persistWebData();
+  await persistData();
   return true;
 }
 
@@ -323,7 +316,7 @@ export async function saveUserProfile(profile: Omit<UserProfile, 'id' | 'created
     updatedAt: toISODate(),
   };
   memoryStore.userProfile = newProfile;
-  persistWebData();
+  await persistData();
   return newProfile;
 }
 
@@ -353,7 +346,7 @@ export async function saveExerciseGoal(goal: Omit<ExerciseGoal, 'id' | 'createdA
     memoryStore.exerciseGoals.push(newGoal);
   }
   
-  persistWebData();
+  await persistData();
   return newGoal;
 }
 
@@ -362,7 +355,7 @@ export async function deleteExerciseGoal(id: string): Promise<boolean> {
   if (index === -1) return false;
   
   memoryStore.exerciseGoals.splice(index, 1);
-  persistWebData();
+  await persistData();
   return true;
 }
 
@@ -374,7 +367,7 @@ export async function getAllData(): Promise<typeof memoryStore> {
 
 export async function importData(data: typeof memoryStore): Promise<void> {
   memoryStore = { ...data };
-  persistWebData();
+  await persistData();
 }
 
 export async function clearAllData(): Promise<void> {
@@ -388,5 +381,5 @@ export async function clearAllData(): Promise<void> {
     exerciseGoals: [],
     exportHistory: [],
   };
-  persistWebData();
+  await persistData();
 }

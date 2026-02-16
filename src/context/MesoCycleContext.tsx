@@ -1,7 +1,8 @@
 // MesoCycle Context - Manages periodization, volume tracking, and auto-regulation
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Storage } from '../utils/storage';
 import type {
   MesoCycle,
   MesoCycleState,
@@ -55,29 +56,16 @@ const initialState: MesoCycleState = {
   availablePrograms: [],
 };
 
-// Load state from localStorage
+// Load state from storage (async - done in effect)
 const loadStateFromStorage = (): MesoCycleState => {
-  try {
-    const stored = localStorage.getItem('mesocycleState');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        ...initialState,
-        ...parsed,
-        weeklyVolume: parsed.weeklyVolume || initializeVolumeTracking(),
-        muscleFatigue: parsed.muscleFatigue || initializeFatigueTracking(),
-      };
-    }
-  } catch (e) {
-    console.error('Failed to load mesocycle state:', e);
-  }
+  // Return initial state, actual loading is done async in the provider
   return initialState;
 };
 
-// Save state to localStorage
-const saveStateToStorage = (state: MesoCycleState) => {
+// Save state to storage
+const saveStateToStorage = async (state: MesoCycleState) => {
   try {
-    localStorage.setItem('mesocycleState', JSON.stringify(state));
+    await Storage.setItem('mesocycleState', JSON.stringify(state));
   } catch (e) {
     console.error('Failed to save mesocycle state:', e);
   }
@@ -378,12 +366,15 @@ function mesoCycleReducer(state: MesoCycleState, action: MesoCycleAction): MesoC
       break;
     }
 
+    case 'LOAD_STATE':
+      return action.payload as MesoCycleState;
+
     default:
       newState = state;
   }
   
-  // Persist to localStorage
-  saveStateToStorage(newState);
+  // Persist to storage (this is handled in the useEffect now)
+  // saveStateToStorage(newState);
   return newState;
 }
 
@@ -462,7 +453,41 @@ const MesoCycleContext = createContext<MesoCycleContextType | undefined>(undefin
 
 // Provider component
 export function MesoCycleProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(mesoCycleReducer, initialState, loadStateFromStorage);
+  const [state, dispatch] = useReducer(mesoCycleReducer, initialState);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load state from storage on mount
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const stored = await Storage.getItem('mesocycleState');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          // Apply loaded state through a custom action
+          dispatch({
+            type: 'LOAD_STATE',
+            payload: {
+              ...initialState,
+              ...parsed,
+              weeklyVolume: parsed.weeklyVolume || initializeVolumeTracking(),
+              muscleFatigue: parsed.muscleFatigue || initializeFatigueTracking(),
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load mesocycle state:', e);
+      }
+      setIsLoaded(true);
+    };
+    loadState();
+  }, []);
+
+  // Persist state changes to storage
+  useEffect(() => {
+    if (isLoaded) {
+      saveStateToStorage(state);
+    }
+  }, [state, isLoaded]);
 
   // Create a new mesocycle
   const createMesoCycle = useCallback((

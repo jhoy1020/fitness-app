@@ -52,8 +52,10 @@ interface WorkoutExercise {
   repsMax?: number;
   rirTarget?: number;
   restSeconds?: number;
-  // Superset pairing
-  supersetWith?: string; // ID of paired exercise
+  // Superset grouping
+  supersetGroupId?: string;
+  supersetOrder?: number;
+  supersetWith?: string; // Legacy: ID of paired exercise
   isWarmupComplete?: boolean;
 }
 
@@ -128,6 +130,32 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   // Exercise demo modal
   const [showExerciseDemo, setShowExerciseDemo] = useState(false);
   const [demoExerciseName, setDemoExerciseName] = useState('');
+
+  // Delete confirmation state
+  const [deleteConfirmExercise, setDeleteConfirmExercise] = useState<string | null>(null);
+  const [deleteConfirmSet, setDeleteConfirmSet] = useState<{ exerciseId: string; setId: string } | null>(null);
+
+  // Helper: Get superset groups
+  const getSupersetGroups = (): Map<string, WorkoutExercise[]> => {
+    const groups = new Map<string, WorkoutExercise[]>();
+    exercises.forEach(ex => {
+      if (ex.supersetGroupId) {
+        const existing = groups.get(ex.supersetGroupId) || [];
+        groups.set(ex.supersetGroupId, [...existing, ex].sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)));
+      }
+    });
+    return groups;
+  };
+
+  // Helper: Get next exercise in superset
+  const getNextInSuperset = (currentExercise: WorkoutExercise): WorkoutExercise | null => {
+    if (!currentExercise.supersetGroupId) return null;
+    const group = exercises
+      .filter(ex => ex.supersetGroupId === currentExercise.supersetGroupId)
+      .sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0));
+    const currentIndex = group.findIndex(ex => ex.id === currentExercise.id);
+    return group[currentIndex + 1] || null;
+  };
 
   // Get last workout performance for an exercise
   const getLastPerformance = (exerciseName: string) => {
@@ -228,6 +256,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
               repsMax: set.repsMax,
               rirTarget: set.rirTarget,
               restSeconds: set.restSeconds,
+              // Superset data
+              supersetGroupId: set.supersetGroupId,
+              supersetOrder: set.supersetOrder,
             });
           }
         });
@@ -390,15 +421,36 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   const handlePairSuperset = (targetId: string) => {
     if (!supersetSourceId) return;
     
-    setExercises(prev => prev.map(ex => {
-      if (ex.id === supersetSourceId) {
-        return { ...ex, supersetWith: targetId };
+    // Create a new superset group ID
+    const newGroupId = `superset-${Date.now()}`;
+    
+    // Find the source exercise to get its current superset info
+    const sourceExercise = exercises.find(e => e.id === supersetSourceId);
+    
+    setExercises(prev => {
+      // If source already has a group, add target to that group
+      if (sourceExercise?.supersetGroupId) {
+        const existingGroup = prev.filter(e => e.supersetGroupId === sourceExercise.supersetGroupId);
+        const maxOrder = Math.max(...existingGroup.map(e => e.supersetOrder || 0));
+        return prev.map(ex => {
+          if (ex.id === targetId) {
+            return { ...ex, supersetGroupId: sourceExercise.supersetGroupId, supersetOrder: maxOrder + 1 };
+          }
+          return ex;
+        });
       }
-      if (ex.id === targetId) {
-        return { ...ex, supersetWith: supersetSourceId };
-      }
-      return ex;
-    }));
+      
+      // Create new superset group with both exercises
+      return prev.map(ex => {
+        if (ex.id === supersetSourceId) {
+          return { ...ex, supersetGroupId: newGroupId, supersetOrder: 0 };
+        }
+        if (ex.id === targetId) {
+          return { ...ex, supersetGroupId: newGroupId, supersetOrder: 1 };
+        }
+        return ex;
+      });
+    });
     
     setShowSupersetPicker(false);
     setSupersetSourceId(null);
@@ -406,12 +458,21 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
 
   const handleRemoveSuperset = (exerciseId: string) => {
     const exercise = exercises.find(e => e.id === exerciseId);
-    if (!exercise?.supersetWith) return;
+    if (!exercise?.supersetGroupId) return;
     
-    const pairedId = exercise.supersetWith;
+    const groupId = exercise.supersetGroupId;
+    const groupMembers = exercises.filter(e => e.supersetGroupId === groupId);
+    
     setExercises(prev => prev.map(ex => {
-      if (ex.id === exerciseId || ex.id === pairedId) {
-        return { ...ex, supersetWith: undefined };
+      if (ex.id === exerciseId) {
+        // Remove this exercise from the superset
+        return { ...ex, supersetGroupId: undefined, supersetOrder: undefined };
+      }
+      if (ex.supersetGroupId === groupId) {
+        // If only one exercise remains in group, remove the group entirely
+        if (groupMembers.length <= 2) {
+          return { ...ex, supersetGroupId: undefined, supersetOrder: undefined };
+        }
       }
       return ex;
     }));
@@ -507,6 +568,8 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       timestamp: new Date(),
     };
 
+    const currentExercise = exercises.find(e => e.id === activeExerciseId);
+    
     setExercises(prev => prev.map(exercise => {
       if (exercise.id === activeExerciseId) {
         return { ...exercise, sets: [...exercise.sets, newSet] };
@@ -517,11 +580,35 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
     // Play set logged sound
     soundService.playSetLogged();
 
-    // Start rest timer
+    // Check if this exercise is part of a superset
+    if (currentExercise?.supersetGroupId) {
+      const nextInSuperset = getNextInSuperset(currentExercise);
+      
+      if (nextInSuperset) {
+        // Auto-advance to next exercise in superset with minimal rest (5 seconds)
+        setActiveExerciseId(nextInSuperset.id);
+        // Clear weight/reps for the next exercise (they may have different values)
+        setWeight('');
+        setReps('');
+        setRir('2');
+        // Short transition timer (5 seconds to switch exercises)
+        setTimerSeconds(0);
+        setTimerRunning(true);
+        // Stop after 5 seconds for superset transition
+        setTimeout(() => {
+          setTimerRunning(false);
+          setTimerSeconds(0);
+        }, 5000);
+        return;
+      }
+      // If no next exercise, this was the last in the superset round - take full rest
+    }
+
+    // Start normal rest timer
     setTimerSeconds(0);
     setTimerRunning(true);
 
-    // Keep same weight/reps for next set
+    // Keep same weight/reps for next set (only for non-superset exercises)
   };
 
   // Delete a set
@@ -786,11 +873,15 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                         </Text>
                       </Surface>
                     )}
-                    {exercise.supersetWith && (
-                      <Surface style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: theme.colors.tertiaryContainer }} elevation={0}>
-                        <Text variant="labelSmall" style={{ color: theme.colors.tertiary }}>🔗 Superset</Text>
-                      </Surface>
-                    )}
+                    {exercise.supersetGroupId && (() => {
+                      const groupMembers = exercises.filter(e => e.supersetGroupId === exercise.supersetGroupId);
+                      const position = (exercise.supersetOrder || 0) + 1;
+                      return (
+                        <Surface style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: theme.colors.tertiaryContainer }} elevation={0}>
+                          <Text variant="labelSmall" style={{ color: theme.colors.tertiary }}>🔗 {position}/{groupMembers.length}</Text>
+                        </Surface>
+                      );
+                    })()}
                     {exercise.isWarmupComplete && (
                       <Text style={{ fontSize: 12 }}>🔥</Text>
                     )}
@@ -802,6 +893,22 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   </Text>
                 </View>
                 <View style={styles.exerciseActions}>
+                  {/* Superset link button - always visible */}
+                  {!exercise.supersetGroupId ? (
+                    <TouchableOpacity
+                      onPress={() => handleCreateSuperset(exercise.id)}
+                      style={{ padding: 8 }}
+                    >
+                      <Text style={{ fontSize: 16 }}>🔗</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveSuperset(exercise.id)}
+                      style={{ padding: 8 }}
+                    >
+                      <Text style={{ fontSize: 16 }}>✂️</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     onPress={() => handleShowSubstitutes(exercise.id)}
                     style={{ padding: 8 }}
@@ -815,7 +922,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     <Text style={{ fontSize: 16 }}>📊</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => handleRemoveExercise(exercise.id)}
+                    onPress={() => setDeleteConfirmExercise(exercise.id)}
                     style={{ padding: 8 }}
                   >
                     <Text style={{ fontSize: 16, color: theme.colors.error }}>✕</Text>
@@ -859,7 +966,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       <Text style={{ fontSize: 14 }}>🧮</Text>
                       <Text variant="labelSmall" style={{ color: theme.colors.primary }}>Plates</Text>
                     </TouchableOpacity>
-                    {!exercise.supersetWith ? (
+                    {!exercise.supersetGroupId ? (
                       <TouchableOpacity 
                         style={[styles.quickActionBtn, { backgroundColor: 'rgba(173,255,47,0.15)' }]}
                         onPress={() => handleCreateSuperset(exercise.id)}
@@ -946,7 +1053,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                           <Text style={[styles.setCell, styles.repsCell]}>{set.reps}</Text>
                           <Text style={[styles.setCell, styles.rirCell, { color: set.rir <= 1 ? theme.colors.error : set.rir >= 3 ? '#00E676' : theme.colors.onSurface }]}>{set.rir}</Text>
                           <TouchableOpacity 
-                            onPress={() => handleDeleteSet(exercise.id, set.id)}
+                            onPress={() => setDeleteConfirmSet({ exerciseId: exercise.id, setId: set.id })}
                             style={styles.deleteCell}
                           >
                             <Text style={{ color: theme.colors.error }}>✕</Text>
@@ -1302,7 +1409,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 Select an exercise to pair:
               </Text>
               {exercises
-                .filter(ex => ex.id !== supersetSourceId && !ex.supersetWith)
+                .filter(ex => ex.id !== supersetSourceId && !ex.supersetGroupId)
                 .map((ex) => (
                   <List.Item
                     key={ex.id}
@@ -1313,7 +1420,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     style={{ paddingVertical: 4 }}
                   />
                 ))}
-              {exercises.filter(ex => ex.id !== supersetSourceId && !ex.supersetWith).length === 0 && (
+              {exercises.filter(ex => ex.id !== supersetSourceId && !ex.supersetGroupId).length === 0 && (
                 <Text style={{ padding: 16, color: theme.colors.outline, textAlign: 'center' }}>
                   Add more exercises to create a superset
                 </Text>
@@ -1365,6 +1472,58 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
           </Dialog.ScrollArea>
           <Dialog.Actions>
             <Button onPress={() => setShowExerciseDemo(false)}>Close</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Delete Exercise Confirmation */}
+      <Portal>
+        <Dialog visible={!!deleteConfirmExercise} onDismiss={() => setDeleteConfirmExercise(null)}>
+          <Dialog.Title>Remove Exercise?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to remove this exercise? All sets logged for this exercise will be deleted.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmExercise(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmExercise) {
+                  handleRemoveExercise(deleteConfirmExercise);
+                  setDeleteConfirmExercise(null);
+                }
+              }}
+            >
+              Remove
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Delete Set Confirmation */}
+      <Portal>
+        <Dialog visible={!!deleteConfirmSet} onDismiss={() => setDeleteConfirmSet(null)}>
+          <Dialog.Title>Delete Set?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to delete this set?
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmSet(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (deleteConfirmSet) {
+                  handleDeleteSet(deleteConfirmSet.exerciseId, deleteConfirmSet.setId);
+                  setDeleteConfirmSet(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

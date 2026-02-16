@@ -265,7 +265,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
           style={{ maxHeight: '80%' }}
         >
           {selectedProgram && (
-            <>
+            <React.Fragment>
               <Dialog.Title>{selectedProgram.name}</Dialog.Title>
               <Dialog.ScrollArea>
                 <ScrollView style={{ paddingHorizontal: 24 }}>
@@ -334,7 +334,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
 
                   {/* Suggested Starting Weights from 1RM */}
                   {exercisesWithSuggestions.length > 0 && (
-                    <>
+                    <React.Fragment>
                       <Divider style={{ marginVertical: 12 }} />
                       <Text variant="titleSmall" style={{ marginBottom: 8 }}>🎯 Suggested Starting Weights</Text>
                       <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
@@ -360,11 +360,11 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                           💡 Add more 1RM records in Profile to get suggestions for {programExercisesWithWeights.length - exercisesWithSuggestions.length} more exercises
                         </Text>
                       )}
-                    </>
+                    </React.Fragment>
                   )}
 
                   {exercisesWithSuggestions.length === 0 && (
-                    <>
+                    <React.Fragment>
                       <Divider style={{ marginVertical: 12 }} />
                       <View style={styles.noWeightHint}>
                         <Text style={{ fontSize: 20, marginRight: 8 }}>💡</Text>
@@ -372,7 +372,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                           Add 1RM records in your Profile to get personalized starting weight suggestions for this program!
                         </Text>
                       </View>
-                    </>
+                    </React.Fragment>
                   )}
                 </ScrollView>
               </Dialog.ScrollArea>
@@ -382,7 +382,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                   Start Program
                 </Button>
               </Dialog.Actions>
-            </>
+            </React.Fragment>
           )}
         </Dialog>
       </Portal>

@@ -334,6 +334,9 @@ export interface ProgramExerciseTemplate {
   restSeconds: number;
   notes?: string;
   alternatives?: string[];  // Alternative exercise names
+  // Superset grouping - exercises with same supersetGroupId are performed back-to-back
+  supersetGroupId?: string;
+  supersetOrder?: number;  // Order within the superset (1, 2, 3...)
 }
 
 // Fatigue tracking for auto-regulation
@@ -509,4 +512,5 @@ export type MesoCycleAction =
   | { type: 'LOAD_PROGRAMS'; payload: TrainingProgram[] }
   | { type: 'START_PROGRAM'; payload: { program: TrainingProgram; startDate: string } }
   | { type: 'RECORD_WORKOUT_COMPLETION'; payload: { workoutId: string; volumeByMuscle: Record<string, number> } }
-  | { type: 'UPDATE_MESOCYCLE'; payload: MesoCycle };
+  | { type: 'UPDATE_MESOCYCLE'; payload: MesoCycle }
+  | { type: 'LOAD_STATE'; payload: MesoCycleState };
