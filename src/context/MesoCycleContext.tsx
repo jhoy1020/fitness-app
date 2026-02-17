@@ -344,6 +344,54 @@ function mesoCycleReducer(state: MesoCycleState, action: MesoCycleAction): MesoC
       break;
     }
 
+    case 'ADVANCE_DAY': {
+      // For rest/cardio/recovery days - just advance to next day without tracking volume
+      if (!state.activeMesoCycle) {
+        newState = state;
+        break;
+      }
+      
+      const newCompletedWorkouts = (state.activeMesoCycle.completedWorkouts || 0) + 1;
+      
+      // Check if week should advance
+      const workoutsPerWeek = state.activeMesoCycle.totalWorkouts / state.activeMesoCycle.totalWeeks;
+      const workoutsThisWeek = newCompletedWorkouts % workoutsPerWeek;
+      
+      let advancedMeso = {
+        ...state.activeMesoCycle,
+        completedWorkouts: newCompletedWorkouts,
+      };
+      
+      // Auto-advance week if all days done
+      if (workoutsThisWeek === 0 && newCompletedWorkouts > 0) {
+        const nextWeek = state.activeMesoCycle.currentWeek + 1;
+        if (nextWeek <= state.activeMesoCycle.totalWeeks) {
+          advancedMeso = {
+            ...advancedMeso,
+            currentWeek: nextWeek,
+            weeks: advancedMeso.weeks.map((week, idx) => {
+              if (idx === state.activeMesoCycle!.currentWeek - 1) {
+                return { ...week, status: 'completed' };
+              }
+              if (idx === nextWeek - 1) {
+                return { ...week, status: 'in_progress' };
+              }
+              return week;
+            }),
+          };
+        }
+      }
+      
+      newState = {
+        ...state,
+        activeMesoCycle: advancedMeso,
+        mesoCycleHistory: state.mesoCycleHistory.map(m =>
+          m.id === advancedMeso.id ? advancedMeso : m
+        ),
+      };
+      break;
+    }
+
     case 'LOAD_PROGRAMS':
       newState = {
         ...state,

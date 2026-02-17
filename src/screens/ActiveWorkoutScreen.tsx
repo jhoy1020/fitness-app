@@ -28,6 +28,7 @@ import { calculatePlates, formatPlatesDisplay, getWarmupSets, WarmupSet } from '
 import { calculate1RM_Epley } from '../utils/formulas';
 import { getExerciseDemo } from '../data/exerciseVideos';
 import { InfoTooltip, ABBREVIATIONS } from '../components';
+import { CardioFinisher } from '../types';
 
 // Responsive breakpoint
 const NARROW_SCREEN_WIDTH = 375;
@@ -135,6 +136,11 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   const [deleteConfirmExercise, setDeleteConfirmExercise] = useState<string | null>(null);
   const [deleteConfirmSet, setDeleteConfirmSet] = useState<{ exerciseId: string; setId: string } | null>(null);
 
+  // Cardio finisher state
+  const [cardioFinisher, setCardioFinisher] = useState<CardioFinisher | null>(null);
+  const [showCardioFinisherDialog, setShowCardioFinisherDialog] = useState(false);
+  const [cardioFinisherCompleted, setCardioFinisherCompleted] = useState(false);
+
   // Helper: Get superset groups
   const getSupersetGroups = (): Map<string, WorkoutExercise[]> => {
     const groups = new Map<string, WorkoutExercise[]>();
@@ -239,6 +245,11 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       const template = route.params.templateWorkout;
       setWorkoutName(template.name);
       setIsProgramWorkout(!!template.isProgramWorkout);
+      
+      // Load cardio finisher if present
+      if (template.cardioFinisher) {
+        setCardioFinisher(template.cardioFinisher);
+      }
       
       // Convert template to exercises with empty sets
       if (template.sets && template.sets.length > 0) {
@@ -655,8 +666,20 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
     setTimerSeconds(0);
   };
 
-  // Finish workout
+  // Called when user taps "Finish Workout" - may show cardio finisher first
   const handleFinishWorkout = () => {
+    // If there's a cardio finisher that hasn't been addressed yet, show the prompt
+    if (cardioFinisher && !cardioFinisherCompleted && !showCardioFinisherDialog) {
+      setShowCardioFinisherDialog(true);
+      return;
+    }
+    
+    // Proceed with workout completion
+    completeWorkout();
+  };
+
+  // Actually complete and save the workout
+  const completeWorkout = () => {
     const allSets = exercises.flatMap(e => 
       e.sets.map(s => ({
         exerciseName: e.name,
@@ -698,6 +721,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
           completed: true,
         })),
       })),
+      // Include cardio finisher completion status
+      cardioFinisherCompleted: cardioFinisher ? cardioFinisherCompleted : undefined,
+      cardioFinisherName: cardioFinisher && cardioFinisherCompleted ? cardioFinisher.name : undefined,
     };
 
     // Calculate volume by muscle group
@@ -1523,6 +1549,73 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
               }}
             >
               Delete
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Cardio Finisher Dialog */}
+      <Portal>
+        <Dialog 
+          visible={showCardioFinisherDialog} 
+          onDismiss={() => {
+            setShowCardioFinisherDialog(false);
+            setCardioFinisherCompleted(false);
+            completeWorkout();
+          }}
+        >
+          <Dialog.Title>🏃 Cardio Finisher</Dialog.Title>
+          <Dialog.Content>
+            {cardioFinisher && (
+              <View>
+                <Surface style={{ padding: 16, borderRadius: 12, marginBottom: 12 }} elevation={1}>
+                  <Text variant="titleMedium" style={{ marginBottom: 4 }}>
+                    {cardioFinisher.name}
+                  </Text>
+                  {(cardioFinisher.description || cardioFinisher.notes) && (
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>
+                      {cardioFinisher.description || cardioFinisher.notes}
+                    </Text>
+                  )}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    <Chip icon="timer-outline" compact>
+                      {cardioFinisher.durationMinutes} min
+                    </Chip>
+                    <Chip icon="fire" compact>
+                      {cardioFinisher.intensity}
+                    </Chip>
+                    {cardioFinisher.caloriesBurned && (
+                      <Chip icon="lightning-bolt" compact>
+                        ~{cardioFinisher.caloriesBurned} cal
+                      </Chip>
+                    )}
+                  </View>
+                </Surface>
+                <Text variant="bodySmall" style={{ color: theme.colors.outline, textAlign: 'center' }}>
+                  Cardio finishers boost calorie burn and improve conditioning
+                </Text>
+              </View>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button 
+              onPress={() => {
+                setShowCardioFinisherDialog(false);
+                setCardioFinisherCompleted(false);
+                completeWorkout();
+              }}
+            >
+              Skip
+            </Button>
+            <Button 
+              mode="contained"
+              onPress={() => {
+                setShowCardioFinisherDialog(false);
+                setCardioFinisherCompleted(true);
+                completeWorkout();
+              }}
+            >
+              ✅ Completed!
             </Button>
           </Dialog.Actions>
         </Dialog>

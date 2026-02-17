@@ -46,20 +46,23 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
     const exerciseMap = new Map<string, { name: string; targetReps: number; suggestedWeight: number | null; oneRM: number | null }>();
     
     selectedProgram.weekTemplate.days.forEach(day => {
-      day.exercises.forEach(exercise => {
-        const exerciseName = exercise.exerciseName;
-        if (exerciseName && !exerciseMap.has(exerciseName)) {
-          const avgReps = Math.floor((exercise.repsMin + exercise.repsMax) / 2);
-          const suggestedWeight = getWeightFrom1RM(exerciseName, avgReps);
-          const oneRMRecord = getOneRepMax(exerciseName);
-          exerciseMap.set(exerciseName, {
-            name: exerciseName,
-            targetReps: avgReps,
-            suggestedWeight,
-            oneRM: oneRMRecord?.weight || null,
-          });
-        }
-      });
+      // Only process workout days that have exercises
+      if (day.exercises) {
+        day.exercises.forEach(exercise => {
+          const exerciseName = exercise.exerciseName;
+          if (exerciseName && !exerciseMap.has(exerciseName)) {
+            const avgReps = Math.floor((exercise.repsMin + exercise.repsMax) / 2);
+            const suggestedWeight = getWeightFrom1RM(exerciseName, avgReps);
+            const oneRMRecord = getOneRepMax(exerciseName);
+            exerciseMap.set(exerciseName, {
+              name: exerciseName,
+              targetReps: avgReps,
+              suggestedWeight,
+              oneRM: oneRMRecord?.weight || null,
+            });
+          }
+        });
+      }
     });
     
     return Array.from(exerciseMap.values());
@@ -304,19 +307,67 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
 
                   {/* Weekly Schedule */}
                   <Text variant="titleSmall" style={{ marginBottom: 8 }}>Weekly Schedule</Text>
-                  {selectedProgram.weekTemplate.days.map((day, idx) => (
-                    <View key={idx} style={styles.dayPreview}>
-                      <Text variant="bodyMedium" style={{ fontWeight: '600' }}>
-                        Day {day.dayNumber}: {day.name}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                        {day.muscleGroups.map(m => MUSCLE_GROUP_LABELS[m]).join(', ')}
-                      </Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.primary }}>
-                        {day.exercises.length} exercises
-                      </Text>
-                    </View>
-                  ))}
+                  {selectedProgram.weekTemplate.days.map((day, idx) => {
+                    const dayType = day.dayType || 'workout';
+                    const getDayIcon = () => {
+                      switch (dayType) {
+                        case 'rest': return '😴';
+                        case 'cardio': return '🏃';
+                        case 'active_recovery': return '🧘';
+                        default: return '💪';
+                      }
+                    };
+                    const getDayColor = () => {
+                      switch (dayType) {
+                        case 'rest': return theme.colors.outline;
+                        case 'cardio': return theme.colors.secondary;
+                        case 'active_recovery': return theme.colors.tertiary;
+                        default: return theme.colors.primary;
+                      }
+                    };
+                    
+                    return (
+                      <View key={idx} style={styles.dayPreview}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ fontSize: 16 }}>{getDayIcon()}</Text>
+                          <Text variant="bodyMedium" style={{ fontWeight: '600' }}>
+                            Day {day.dayNumber}: {day.name}
+                          </Text>
+                        </View>
+                        {dayType === 'workout' && day.muscleGroups && (
+                          <>
+                            <Text variant="bodySmall" style={{ color: theme.colors.outline, marginLeft: 24 }}>
+                              {day.muscleGroups.map(m => MUSCLE_GROUP_LABELS[m]).join(', ')}
+                            </Text>
+                            <Text variant="bodySmall" style={{ color: getDayColor(), marginLeft: 24 }}>
+                              {day.exercises?.length || 0} exercises
+                              {day.cardioFinisher && ' + cardio finisher'}
+                            </Text>
+                          </>
+                        )}
+                        {dayType === 'cardio' && (
+                          <Text variant="bodySmall" style={{ color: getDayColor(), marginLeft: 24 }}>
+                            {day.cardioActivities?.length || 0} cardio options
+                          </Text>
+                        )}
+                        {dayType === 'active_recovery' && (
+                          <Text variant="bodySmall" style={{ color: getDayColor(), marginLeft: 24 }}>
+                            {day.recoverySuggestions?.length || 0} recovery activities suggested
+                          </Text>
+                        )}
+                        {dayType === 'rest' && (
+                          <Text variant="bodySmall" style={{ color: getDayColor(), marginLeft: 24 }}>
+                            Complete rest day
+                          </Text>
+                        )}
+                        {day.notes && (
+                          <Text variant="bodySmall" style={{ color: theme.colors.outline, marginLeft: 24, fontStyle: 'italic' }}>
+                            {day.notes}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
 
                   <Divider style={{ marginVertical: 12 }} />
 

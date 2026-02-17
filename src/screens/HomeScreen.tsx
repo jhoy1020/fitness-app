@@ -62,6 +62,14 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [deleteConfirmSet, setDeleteConfirmSet] = useState<string | null>(null);
   const [deleteConfirmNewSet, setDeleteConfirmNewSet] = useState<string | null>(null);
   
+  // Rest/Cardio/Recovery day dialogs
+  const [showRestDayDialog, setShowRestDayDialog] = useState(false);
+  const [showCardioDialog, setShowCardioDialog] = useState(false);
+  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  const [restDayInfo, setRestDayInfo] = useState<any>(null);
+  const [cardioInfo, setCardioInfo] = useState<any>(null);
+  const [recoveryInfo, setRecoveryInfo] = useState<any>(null);
+  
   // Program completion modal state
   const [showProgramComplete, setShowProgramComplete] = useState(false);
   const [completedProgramStats, setCompletedProgramStats] = useState<{
@@ -322,11 +330,17 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     
     if (!nextDay) return null;
     
+    // Determine day type
+    const dayType = nextDay.dayType || 'workout';
+    
     return {
       name: nextDay.name,
       dayNumber: dayIndex + 1,
       totalDays: daysInWeek,
-      sets: nextDay.exercises.map(ex => ({
+      dayType,
+      notes: nextDay.notes,
+      cardioFinisher: nextDay.cardioFinisher,
+      sets: dayType === 'workout' && nextDay.exercises ? nextDay.exercises.map(ex => ({
         exerciseName: ex.exerciseName || `${ex.muscleGroup} exercise`,
         muscleGroup: ex.muscleGroup,
         targetSets: ex.sets,
@@ -334,18 +348,49 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         repsMax: ex.repsMax,
         rirTarget: ex.rirTarget,
         restSeconds: ex.restSeconds,
-      })),
+        supersetGroupId: ex.supersetGroupId,
+        supersetOrder: ex.supersetOrder,
+      })) : [],
+      // For cardio days
+      cardioActivities: nextDay.cardioActivities,
+      // For active recovery days
+      recoverySuggestions: nextDay.recoverySuggestions,
     };
   }, [mesoState.activeMesoCycle]);
 
   // Start program workout handler
   const handleStartProgramWorkout = () => {
     if (getNextProgramWorkout) {
+      const { dayType } = getNextProgramWorkout;
+      
+      // Handle rest days
+      if (dayType === 'rest') {
+        setRestDayInfo(getNextProgramWorkout);
+        setShowRestDayDialog(true);
+        return;
+      }
+      
+      // Handle cardio days
+      if (dayType === 'cardio') {
+        setCardioInfo(getNextProgramWorkout);
+        setShowCardioDialog(true);
+        return;
+      }
+      
+      // Handle active recovery days
+      if (dayType === 'active_recovery') {
+        setRecoveryInfo(getNextProgramWorkout);
+        setShowRecoveryDialog(true);
+        return;
+      }
+      
+      // Regular workout day
       navigation.navigate('ActiveWorkout', {
         templateWorkout: {
           name: getNextProgramWorkout.name,
           sets: getNextProgramWorkout.sets,
           isProgramWorkout: true,
+          cardioFinisher: getNextProgramWorkout.cardioFinisher,
         }
       });
     } else {
@@ -569,13 +614,39 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   Week {mesoState.activeMesoCycle.currentWeek} of {mesoState.activeMesoCycle.totalWeeks}
                   {getNextProgramWorkout && ` • Day ${getNextProgramWorkout.dayNumber}/${getNextProgramWorkout.totalDays}`}
                 </Text>
+                {getNextProgramWorkout && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Text style={{ marginRight: 6 }}>
+                      {getNextProgramWorkout.dayType === 'rest' ? '😴' : 
+                       getNextProgramWorkout.dayType === 'cardio' ? '🏃' :
+                       getNextProgramWorkout.dayType === 'active_recovery' ? '🧘' : '💪'}
+                    </Text>
+                    <Text variant="labelMedium" style={{ 
+                      color: getNextProgramWorkout.dayType === 'rest' ? theme.colors.outline :
+                             getNextProgramWorkout.dayType === 'cardio' ? theme.colors.secondary :
+                             getNextProgramWorkout.dayType === 'active_recovery' ? theme.colors.tertiary :
+                             theme.colors.primary
+                    }}>
+                      {getNextProgramWorkout.name}
+                    </Text>
+                  </View>
+                )}
               </View>
               <Button
                 mode="contained"
                 onPress={handleStartProgramWorkout}
                 compact
+                buttonColor={
+                  getNextProgramWorkout?.dayType === 'rest' ? theme.colors.surfaceVariant :
+                  getNextProgramWorkout?.dayType === 'cardio' ? theme.colors.secondary :
+                  getNextProgramWorkout?.dayType === 'active_recovery' ? theme.colors.tertiary :
+                  theme.colors.primary
+                }
               >
-                {getNextProgramWorkout ? 'Continue' : 'Start Workout'}
+                {getNextProgramWorkout?.dayType === 'rest' ? '😴 Rest Day' :
+                 getNextProgramWorkout?.dayType === 'cardio' ? '🏃 Cardio' :
+                 getNextProgramWorkout?.dayType === 'active_recovery' ? '🧘 Recovery' :
+                 getNextProgramWorkout ? 'Start Workout' : 'Start Workout'}
               </Button>
             </View>
             <ProgressBar 
@@ -1337,6 +1408,144 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               }}
             >
               Delete
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Rest Day Dialog */}
+      <Portal>
+        <Dialog visible={showRestDayDialog} onDismiss={() => setShowRestDayDialog(false)}>
+          <Dialog.Title>😴 Rest Day</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+              Today is a scheduled rest day: <Text style={{ fontWeight: 'bold' }}>{restDayInfo?.name}</Text>
+            </Text>
+            {restDayInfo?.notes && (
+              <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12, fontStyle: 'italic' }}>
+                {restDayInfo.notes}
+              </Text>
+            )}
+            <Surface style={{ padding: 12, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant }} elevation={0}>
+              <Text variant="labelMedium" style={{ marginBottom: 8 }}>💡 Rest Day Tips:</Text>
+              <Text variant="bodySmall">• Get 7-9 hours of sleep</Text>
+              <Text variant="bodySmall">• Eat enough protein (1g per lb bodyweight)</Text>
+              <Text variant="bodySmall">• Stay hydrated</Text>
+              <Text variant="bodySmall">• Light walking is fine if you're feeling active</Text>
+            </Surface>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowRestDayDialog(false)}>Maybe Later</Button>
+            <Button 
+              mode="contained"
+              onPress={() => {
+                // Mark rest day as complete - advance to next day
+                if (mesoState.activeMesoCycle) {
+                  mesoDispatch({ type: 'ADVANCE_DAY' });
+                }
+                setShowRestDayDialog(false);
+              }}
+            >
+              Complete Rest Day ✓
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Cardio Day Dialog */}
+      <Portal>
+        <Dialog visible={showCardioDialog} onDismiss={() => setShowCardioDialog(false)}>
+          <Dialog.Title>🏃 Cardio Day</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+              Today is: <Text style={{ fontWeight: 'bold' }}>{cardioInfo?.name}</Text>
+            </Text>
+            {cardioInfo?.notes && (
+              <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12, fontStyle: 'italic' }}>
+                {cardioInfo.notes}
+              </Text>
+            )}
+            {cardioInfo?.cardioActivities?.length > 0 && (
+              <Surface style={{ padding: 12, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant }} elevation={0}>
+                <Text variant="labelMedium" style={{ marginBottom: 8 }}>Suggested Activities:</Text>
+                {cardioInfo.cardioActivities.map((activity: any, idx: number) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Text style={{ marginRight: 8 }}>•</Text>
+                    <Text variant="bodySmall" style={{ flex: 1 }}>{activity.name}</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.primary }}>
+                      {activity.durationMinutes} min
+                    </Text>
+                  </View>
+                ))}
+              </Surface>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowCardioDialog(false)}>Skip</Button>
+            <Button 
+              mode="contained"
+              onPress={() => {
+                // Mark cardio day as complete
+                if (mesoState.activeMesoCycle) {
+                  mesoDispatch({ type: 'ADVANCE_DAY' });
+                }
+                setShowCardioDialog(false);
+              }}
+            >
+              Complete Cardio ✓
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Active Recovery Day Dialog */}
+      <Portal>
+        <Dialog visible={showRecoveryDialog} onDismiss={() => setShowRecoveryDialog(false)}>
+          <Dialog.Title>🧘 Active Recovery</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+              Today is: <Text style={{ fontWeight: 'bold' }}>{recoveryInfo?.name}</Text>
+            </Text>
+            {recoveryInfo?.notes && (
+              <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12, fontStyle: 'italic' }}>
+                {recoveryInfo.notes}
+              </Text>
+            )}
+            {recoveryInfo?.recoverySuggestions?.length > 0 && (
+              <Surface style={{ padding: 12, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant }} elevation={0}>
+                <Text variant="labelMedium" style={{ marginBottom: 8 }}>Recommended Recovery Activities:</Text>
+                {recoveryInfo.recoverySuggestions.map((suggestion: any, idx: number) => (
+                  <View key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: idx < recoveryInfo.recoverySuggestions.length - 1 ? 1 : 0, borderBottomColor: theme.colors.outlineVariant }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text variant="bodyMedium" style={{ fontWeight: '600' }}>{suggestion.name}</Text>
+                      <Text variant="labelSmall" style={{ color: theme.colors.primary }}>
+                        {suggestion.durationMinutes} min
+                      </Text>
+                    </View>
+                    <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                      {suggestion.description}
+                    </Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.tertiary, fontStyle: 'italic' }}>
+                      {suggestion.rationale}
+                    </Text>
+                  </View>
+                ))}
+              </Surface>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowRecoveryDialog(false)}>Skip</Button>
+            <Button 
+              mode="contained"
+              onPress={() => {
+                // Mark recovery day as complete
+                if (mesoState.activeMesoCycle) {
+                  mesoDispatch({ type: 'ADVANCE_DAY' });
+                }
+                setShowRecoveryDialog(false);
+              }}
+            >
+              Complete Recovery ✓
             </Button>
           </Dialog.Actions>
         </Dialog>

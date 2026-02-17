@@ -14,6 +14,82 @@ export type MuscleGroup =
   | 'core'
   | 'full_body';
 
+// Day types for programs
+export type DayType = 'workout' | 'rest' | 'cardio' | 'active_recovery';
+
+// Cardio activity types
+export type CardioType = 
+  | 'walking'
+  | 'running'
+  | 'cycling'
+  | 'swimming'
+  | 'rowing'
+  | 'elliptical'
+  | 'stair_climber'
+  | 'hiit'
+  | 'jump_rope'
+  | 'other';
+
+// Active recovery activity types
+export type RecoveryActivityType =
+  | 'stretching'
+  | 'foam_rolling'
+  | 'yoga'
+  | 'mobility_work'
+  | 'light_walking'
+  | 'swimming'
+  | 'massage'
+  | 'meditation'
+  | 'other';
+
+// Intensity levels
+export type IntensityLevel = 'low' | 'moderate' | 'high';
+
+// Cardio activity definition
+export interface CardioActivity {
+  id: string;
+  type: CardioType;
+  name: string;
+  durationMinutes: number;
+  intensity: IntensityLevel;
+  distanceKm?: number;
+  caloriesBurned?: number;
+  heartRateAvg?: number;
+  heartRateMax?: number;
+  notes?: string;
+}
+
+// Active recovery activity definition
+export interface ActiveRecoveryActivity {
+  id: string;
+  type: RecoveryActivityType;
+  name: string;
+  durationMinutes: number;
+  targetAreas?: MuscleGroup[];
+  notes?: string;
+}
+
+// Recovery suggestion based on previous workout
+export interface RecoverySuggestion {
+  activity: RecoveryActivityType;
+  name: string;
+  durationMinutes: number;
+  description: string;
+  targetMuscles: MuscleGroup[];
+  rationale: string;
+}
+
+// Cardio finisher for workout days
+export interface CardioFinisher {
+  type: CardioType;
+  name: string;
+  durationMinutes: number;
+  intensity: IntensityLevel;
+  notes?: string;
+  description?: string;  // UI-friendly description
+  caloriesBurned?: number;  // Estimated calories
+}
+
 export type Equipment =
   | 'barbell'
   | 'dumbbell'
@@ -317,9 +393,15 @@ export interface ProgramWeekTemplate {
 
 export interface ProgramDayTemplate {
   dayNumber: number;
-  name: string;  // e.g., "Push Day", "Upper Body A"
-  muscleGroups: MuscleGroup[];
-  exercises: ProgramExerciseTemplate[];
+  name: string;  // e.g., "Push Day", "Upper Body A", "Rest Day"
+  dayType?: DayType;  // 'workout' | 'rest' | 'cardio' | 'active_recovery' - defaults to 'workout'
+  muscleGroups?: MuscleGroup[];  // Optional for rest/cardio days
+  exercises?: ProgramExerciseTemplate[];  // Optional for rest/cardio days
+  cardioActivities?: CardioActivity[];  // For cardio days
+  recoveryActivities?: ActiveRecoveryActivity[];  // For active recovery days
+  cardioFinisher?: CardioFinisher;  // Optional cardio finisher for workout days
+  recoverySuggestions?: RecoverySuggestion[];  // Smart suggestions for rest/recovery days
+  notes?: string;  // Optional notes for the day
 }
 
 export interface ProgramExerciseTemplate {
@@ -512,5 +594,6 @@ export type MesoCycleAction =
   | { type: 'LOAD_PROGRAMS'; payload: TrainingProgram[] }
   | { type: 'START_PROGRAM'; payload: { program: TrainingProgram; startDate: string } }
   | { type: 'RECORD_WORKOUT_COMPLETION'; payload: { workoutId: string; volumeByMuscle: Record<string, number> } }
+  | { type: 'ADVANCE_DAY' }  // For rest/cardio/recovery days - just advance to next day
   | { type: 'UPDATE_MESOCYCLE'; payload: MesoCycle }
   | { type: 'LOAD_STATE'; payload: MesoCycleState };
