@@ -602,6 +602,53 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               </View>
             ))}
           </View>
+          
+          {/* Action Buttons Row */}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate('ActiveWorkout')}
+              style={{ flex: 1 }}
+              icon="dumbbell"
+              compact
+            >
+              Workout
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={() => {
+                setRestDayInfo({ name: 'Rest Day', dayType: 'rest' });
+                setShowRestDayDialog(true);
+              }}
+              style={{ flex: 1 }}
+              compact
+            >
+              😴 Rest
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={() => {
+                setRecoveryInfo({ name: 'Active Recovery', dayType: 'active_recovery' });
+                setShowRecoveryDialog(true);
+              }}
+              style={{ flex: 1 }}
+              compact
+            >
+              🧘 Recovery
+            </Button>
+          </View>
+          
+          {/* Programs Button - when no active program */}
+          {!mesoState.activeMesoCycle && (
+            <Button
+              mode="contained-tonal"
+              onPress={() => navigation.navigate('Programs')}
+              style={{ marginTop: 8 }}
+              icon="clipboard-list"
+            >
+              Browse Training Programs
+            </Button>
+          )}
         </Surface>
 
         {/* Active Mesocycle - Compact Card */}
@@ -1550,28 +1597,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-
-      {/* Start Workout Button - When no program */}
-      {!workoutState.activeWorkout && !mesoState.activeMesoCycle && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-          onPress={() => navigation.navigate('Programs')}
-          activeOpacity={0.8}
-        >
-          <Text style={{ color: theme.colors.onPrimary, fontWeight: 'bold', fontSize: 16 }}>+ Start Program</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* New Workout Button - When program is active */}
-      {mesoState.activeMesoCycle && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.colors.secondary }]}
-          onPress={() => navigation.navigate('ActiveWorkout')}
-          activeOpacity={0.8}
-        >
-          <Text style={{ color: theme.colors.onSecondary, fontWeight: 'bold', fontSize: 16 }}>+ New Workout</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -1731,20 +1756,6 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 12,
     alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 28,
-    elevation: 4,
-    shadowColor: '#1B2838',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    zIndex: 100,
   },
   mesoCard: {
     padding: 16,
