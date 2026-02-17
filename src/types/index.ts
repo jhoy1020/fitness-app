@@ -155,6 +155,8 @@ export interface Workout {
   stravaActivityId?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Day type tracking
+  dayType?: DayType;  // 'workout' | 'rest' | 'cardio' | 'active_recovery'
   // Sets logged during workout
   sets?: Array<{
     exerciseName: string;

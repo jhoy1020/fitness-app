@@ -11,7 +11,9 @@ import { getAllExercises, getSetsByWorkoutId } from '../services/db';
 import { calculate1RM_Epley } from '../utils/formulas';
 import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
 import { TRAINING_PROGRAMS } from '../data/programs';
-import type { Exercise, WorkoutSet, Workout } from '../types';
+import { getRecoverySuggestions } from '../utils/recoveryEngine';
+import { RECOVERY_LIBRARY, RecoveryTemplate } from '../data/activities';
+import type { Exercise, WorkoutSet, Workout, MuscleGroup, RecoverySuggestion } from '../types';
 
 interface EditableSet {
   id: string;
@@ -28,7 +30,7 @@ interface HomeScreenProps {
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
   const theme = useTheme();
-  const { state: workoutState, dispatch, repeatWorkout } = useWorkout();
+  const { state: workoutState, dispatch: workoutDispatch, repeatWorkout } = useWorkout();
   const { state: userState } = useUser();
   const { state: mesoState, dispatch: mesoDispatch, shouldTriggerDeload } = useMesoCycle();
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -69,6 +71,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [restDayInfo, setRestDayInfo] = useState<any>(null);
   const [cardioInfo, setCardioInfo] = useState<any>(null);
   const [recoveryInfo, setRecoveryInfo] = useState<any>(null);
+  const [selectedRecoveryActivities, setSelectedRecoveryActivities] = useState<Set<string>>(new Set());
   
   // Program completion modal state
   const [showProgramComplete, setShowProgramComplete] = useState(false);
@@ -214,7 +217,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         reps: parseInt(s.reps) || 0,
       }));
       
-      dispatch({
+      workoutDispatch({
         type: 'UPDATE_WORKOUT',
         payload: { 
           id: editingWorkout.id, 
@@ -280,14 +283,15 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     // Calculate duration estimate (2 min per set)
     const durationSeconds = sets.length * 120;
     
-    dispatch({
-      type: 'ADD_WORKOUT',
+    workoutDispatch({
+      type: 'COMPLETE_WORKOUT',
       payload: {
         id: workoutId,
         name: newWorkoutName.trim(),
         date: newWorkoutDate || new Date().toISOString().split('T')[0],
         duration: durationSeconds,
         sets: sets,
+        dayType: 'workout' as const,
       }
     });
     
@@ -300,7 +304,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   
   const confirmDelete = () => {
     if (deletingWorkout) {
-      dispatch({ type: 'DELETE_WORKOUT', payload: deletingWorkout.id });
+      workoutDispatch({ type: 'DELETE_WORKOUT', payload: deletingWorkout.id });
       setDeletingWorkout(null);
     }
   };
@@ -439,7 +443,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     return streak;
   }, [workoutState.workoutHistory]);
 
-  // Week calendar - shows each day of the current week and whether user worked out
+  // Week calendar - shows each day of the current week with activity type
   const weekCalendar = useMemo(() => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday
@@ -454,11 +458,15 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
       
-      const hasWorkout = workoutState.workoutHistory.some(w => {
+      // Find workout for this day
+      const dayWorkout = workoutState.workoutHistory.find(w => {
         const workoutDate = new Date(w.date);
         workoutDate.setHours(0, 0, 0, 0);
         return workoutDate.getTime() === date.getTime();
       });
+      
+      const hasActivity = !!dayWorkout;
+      const dayType = dayWorkout?.dayType || (hasActivity ? 'workout' : null);
       
       const isToday = date.toDateString() === today.toDateString();
       const isFuture = date > today;
@@ -466,13 +474,81 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       days.push({
         dayName: dayNames[i],
         date: date.getDate(),
-        hasWorkout,
+        hasActivity,
+        dayType,
         isToday,
         isFuture,
       });
     }
     
     return days;
+  }, [workoutState.workoutHistory]);
+
+  // Activity stats for smart recommendations
+  const activityStats = useMemo(() => {
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+    
+    const last14Days = new Date();
+    last14Days.setDate(last14Days.getDate() - 14);
+    
+    const recentWorkouts = workoutState.workoutHistory.filter(w => new Date(w.date) >= last7Days);
+    const twoWeekWorkouts = workoutState.workoutHistory.filter(w => new Date(w.date) >= last14Days);
+    
+    const workoutDays = recentWorkouts.filter(w => !w.dayType || w.dayType === 'workout').length;
+    const restDays = recentWorkouts.filter(w => w.dayType === 'rest').length;
+    const recoveryDays = recentWorkouts.filter(w => w.dayType === 'active_recovery').length;
+    
+    // Calculate consecutive workout days (no rest)
+    let consecutiveWorkoutDays = 0;
+    const sortedHistory = [...workoutState.workoutHistory].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    for (const workout of sortedHistory) {
+      if (!workout.dayType || workout.dayType === 'workout') {
+        consecutiveWorkoutDays++;
+      } else {
+        break;
+      }
+    }
+    
+    // Smart recommendation
+    let recommendation: { type: 'workout' | 'rest' | 'recovery'; message: string; icon: string } | null = null;
+    
+    if (consecutiveWorkoutDays >= 4) {
+      recommendation = {
+        type: 'rest',
+        message: `${consecutiveWorkoutDays} workout days in a row! Consider a rest day for recovery.`,
+        icon: '😴'
+      };
+    } else if (workoutDays >= 6 && restDays === 0) {
+      recommendation = {
+        type: 'rest',
+        message: 'Heavy week! Your muscles need recovery time.',
+        icon: '⚠️'
+      };
+    } else if (restDays >= 3 && workoutDays <= 2) {
+      recommendation = {
+        type: 'workout',
+        message: 'Well rested! Ready to hit the weights.',
+        icon: '🔥'
+      };
+    } else if (consecutiveWorkoutDays >= 2 && recoveryDays === 0) {
+      recommendation = {
+        type: 'recovery',
+        message: 'Active recovery could help with muscle soreness.',
+        icon: '🧘'
+      };
+    }
+    
+    return {
+      workoutDays,
+      restDays,
+      recoveryDays,
+      consecutiveWorkoutDays,
+      recommendation,
+    };
   }, [workoutState.workoutHistory]);
 
   // Get recent PRs
@@ -557,55 +633,104 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           <Surface style={styles.streakCard} elevation={2}>
             <Text style={{ fontSize: 28 }}>🔥</Text>
             <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-              {currentStreak}
+              {activityStats.workoutDays}
             </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Streak</Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Workouts</Text>
           </Surface>
           <Surface style={styles.streakCard} elevation={2}>
-            <Text style={{ fontSize: 28 }}>📅</Text>
+            <Text style={{ fontSize: 28 }}>😴</Text>
             <Text variant="headlineSmall" style={{ color: theme.colors.secondary }}>
-              {weeklyStreak}/7
+              {activityStats.restDays}
             </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>This Week</Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Rest Days</Text>
           </Surface>
           <Surface style={styles.streakCard} elevation={2}>
-            <Text style={{ fontSize: 28 }}>💪</Text>
+            <Text style={{ fontSize: 28 }}>🧘</Text>
             <Text variant="headlineSmall" style={{ color: theme.colors.tertiary }}>
-              {workoutState.workoutHistory.length}
+              {activityStats.recoveryDays}
             </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Total</Text>
+            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Recovery</Text>
           </Surface>
         </View>
 
         {/* Week Calendar */}
         <Surface style={styles.weekCalendar} elevation={1}>
           <View style={styles.weekDays}>
-            {weekCalendar.map((day, index) => (
-              <View key={index} style={styles.dayColumn}>
-                <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
-                  {day.dayName}
-                </Text>
-                <View style={[
-                  styles.dayCircle,
-                  day.hasWorkout && { backgroundColor: theme.colors.primary },
-                  day.isToday && !day.hasWorkout && { borderColor: theme.colors.primary, borderWidth: 2 },
-                  day.isFuture && { opacity: 0.3 },
-                ]}>
-                  {day.hasWorkout ? (
-                    <Text style={{ color: '#fff', fontSize: 10 }}>✓</Text>
-                  ) : (
-                    <Text variant="labelSmall" style={{ color: day.isToday ? theme.colors.primary : theme.colors.outline }}>
-                      {day.date}
-                    </Text>
-                  )}
+            {weekCalendar.map((day, index) => {
+              // Determine icon and color based on day type
+              const getDayStyle = () => {
+                if (!day.hasActivity) return {};
+                switch (day.dayType) {
+                  case 'rest': return { backgroundColor: theme.colors.surfaceVariant };
+                  case 'active_recovery': return { backgroundColor: theme.colors.tertiaryContainer };
+                  case 'cardio': return { backgroundColor: theme.colors.secondaryContainer };
+                  default: return { backgroundColor: theme.colors.primary };
+                }
+              };
+              
+              const getDayIcon = () => {
+                if (!day.hasActivity) return null;
+                switch (day.dayType) {
+                  case 'rest': return '😴';
+                  case 'active_recovery': return '🧘';
+                  case 'cardio': return '🏃';
+                  default: return '🔥';
+                }
+              };
+              
+              return (
+                <View key={index} style={styles.dayColumn}>
+                  <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
+                    {day.dayName}
+                  </Text>
+                  <View style={[
+                    styles.dayCircle,
+                    getDayStyle(),
+                    day.isToday && !day.hasActivity && { borderColor: theme.colors.primary, borderWidth: 2 },
+                    day.isFuture && { opacity: 0.3 },
+                  ]}>
+                    {day.hasActivity ? (
+                      <Text style={{ fontSize: 12 }}>{getDayIcon()}</Text>
+                    ) : (
+                      <Text variant="labelSmall" style={{ color: day.isToday ? theme.colors.primary : theme.colors.outline }}>
+                        {day.date}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
           
+          {/* Smart Recommendation */}
+          {activityStats.recommendation && (
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              marginTop: 12, 
+              paddingTop: 12, 
+              borderTopWidth: 1, 
+              borderTopColor: theme.colors.outlineVariant,
+              backgroundColor: activityStats.recommendation.type === 'rest' ? theme.colors.errorContainer :
+                              activityStats.recommendation.type === 'recovery' ? theme.colors.tertiaryContainer :
+                              theme.colors.primaryContainer,
+              marginHorizontal: -16,
+              marginBottom: -16,
+              padding: 12,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+            }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>{activityStats.recommendation.icon}</Text>
+              <Text variant="bodySmall" style={{ flex: 1 }}>
+                {activityStats.recommendation.message}
+              </Text>
+            </View>
+          )}
+          
           {/* Action Buttons Row */}
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
-            <Button
+          {!activityStats.recommendation && (
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
+              <Button
               mode="contained"
               onPress={() => navigation.navigate('ActiveWorkout')}
               style={{ flex: 1 }}
@@ -628,7 +753,37 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             <Button
               mode="outlined"
               onPress={() => {
-                setRecoveryInfo({ name: 'Active Recovery', dayType: 'active_recovery' });
+                // Get muscle groups from recent workouts (last 3 days)
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                const recentWorkouts = workoutState.workoutHistory.filter(w => 
+                  w.dayType !== 'rest' && 
+                  w.dayType !== 'cardio' && 
+                  w.dayType !== 'active_recovery' &&
+                  new Date(w.date) >= threeDaysAgo
+                );
+                
+                // Extract muscle groups from recent workout sets
+                const trainedMuscles: MuscleGroup[] = [];
+                recentWorkouts.forEach(w => {
+                  w.sets?.forEach(set => {
+                    const muscle = set.muscleGroup?.toLowerCase() as MuscleGroup;
+                    if (muscle && !trainedMuscles.includes(muscle)) {
+                      trainedMuscles.push(muscle);
+                    }
+                  });
+                });
+                
+                // Get smart suggestions based on trained muscles
+                const smartSuggestions = getRecoverySuggestions(trainedMuscles, 5);
+                
+                setRecoveryInfo({ 
+                  name: 'Active Recovery', 
+                  dayType: 'active_recovery',
+                  trainedMuscles,
+                  smartSuggestions,
+                });
+                setSelectedRecoveryActivities(new Set());
                 setShowRecoveryDialog(true);
               }}
               style={{ flex: 1 }}
@@ -637,6 +792,74 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               🧘 Recovery
             </Button>
           </View>
+          )}
+          
+          {/* Action Buttons Row - when recommendation is shown */}
+          {activityStats.recommendation && (
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
+              <Button
+                mode="contained"
+                onPress={() => navigation.navigate('ActiveWorkout')}
+                style={{ flex: 1 }}
+                icon="dumbbell"
+                compact
+              >
+                Workout
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  setRestDayInfo({ name: 'Rest Day', dayType: 'rest' });
+                  setShowRestDayDialog(true);
+                }}
+                style={{ flex: 1 }}
+                compact
+              >
+                😴 Rest
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  // Get muscle groups from recent workouts (last 3 days)
+                  const threeDaysAgo = new Date();
+                  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                  const recentWorkouts = workoutState.workoutHistory.filter(w => 
+                    w.dayType !== 'rest' && 
+                    w.dayType !== 'cardio' && 
+                    w.dayType !== 'active_recovery' &&
+                    new Date(w.date) >= threeDaysAgo
+                  );
+                  
+                  // Extract muscle groups from recent workout sets
+                  const trainedMuscles: MuscleGroup[] = [];
+                  recentWorkouts.forEach(w => {
+                    w.sets?.forEach(set => {
+                      const muscle = set.muscleGroup?.toLowerCase() as MuscleGroup;
+                      if (muscle && !trainedMuscles.includes(muscle)) {
+                        trainedMuscles.push(muscle);
+                      }
+                    });
+                  });
+                  
+                  // Get smart suggestions based on trained muscles
+                  const smartSuggestions = getRecoverySuggestions(trainedMuscles, 5);
+                  
+                  setRecoveryInfo({ 
+                    name: 'Active Recovery', 
+                    dayType: 'active_recovery',
+                    trainedMuscles,
+                    smartSuggestions,
+                  });
+                  setSelectedRecoveryActivities(new Set());
+                  setShowRecoveryDialog(true);
+                }}
+                style={{ flex: 1 }}
+                compact
+              >
+                🧘 Recovery
+              </Button>
+            </View>
+          )}
           
           {/* Programs Button - when no active program */}
           {!mesoState.activeMesoCycle && (
@@ -1482,18 +1705,28 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             </Surface>
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setShowRestDayDialog(false)}>Maybe Later</Button>
+            <Button onPress={() => setShowRestDayDialog(false)}>Close</Button>
             <Button 
               mode="contained"
               onPress={() => {
-                // Mark rest day as complete - advance to next day
+                // Log rest day to workout history
+                const restDay = {
+                  id: Date.now().toString(),
+                  name: 'Rest Day',
+                  date: new Date().toISOString(),
+                  dayType: 'rest' as const,
+                  sets: [],
+                };
+                workoutDispatch({ type: 'COMPLETE_WORKOUT', payload: restDay });
+                
+                // Advance program day if in a program
                 if (mesoState.activeMesoCycle) {
                   mesoDispatch({ type: 'ADVANCE_DAY' });
                 }
                 setShowRestDayDialog(false);
               }}
             >
-              Complete Rest Day ✓
+              Complete ✓
             </Button>
           </Dialog.Actions>
         </Dialog>
@@ -1532,7 +1765,17 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             <Button 
               mode="contained"
               onPress={() => {
-                // Mark cardio day as complete
+                // Log cardio day to workout history
+                const cardioDay = {
+                  id: Date.now().toString(),
+                  name: cardioInfo?.name || 'Cardio Day',
+                  date: new Date().toISOString(),
+                  dayType: 'cardio' as const,
+                  sets: [],
+                };
+                workoutDispatch({ type: 'COMPLETE_WORKOUT', payload: cardioDay });
+                
+                // Advance program day if in a program
                 if (mesoState.activeMesoCycle) {
                   mesoDispatch({ type: 'ADVANCE_DAY' });
                 }
@@ -1547,52 +1790,181 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
 
       {/* Active Recovery Day Dialog */}
       <Portal>
-        <Dialog visible={showRecoveryDialog} onDismiss={() => setShowRecoveryDialog(false)}>
+        <Dialog visible={showRecoveryDialog} onDismiss={() => setShowRecoveryDialog(false)} style={{ maxHeight: '85%' }}>
           <Dialog.Title>🧘 Active Recovery</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
-              Today is: <Text style={{ fontWeight: 'bold' }}>{recoveryInfo?.name}</Text>
-            </Text>
-            {recoveryInfo?.notes && (
-              <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12, fontStyle: 'italic' }}>
-                {recoveryInfo.notes}
+          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+            <ScrollView style={{ paddingHorizontal: 24 }}>
+              <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 16 }}>
+                Select activities to complete:
               </Text>
-            )}
-            {recoveryInfo?.recoverySuggestions?.length > 0 && (
-              <Surface style={{ padding: 12, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant }} elevation={0}>
-                <Text variant="labelMedium" style={{ marginBottom: 8 }}>Recommended Recovery Activities:</Text>
-                {recoveryInfo.recoverySuggestions.map((suggestion: any, idx: number) => (
-                  <View key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottomWidth: idx < recoveryInfo.recoverySuggestions.length - 1 ? 1 : 0, borderBottomColor: theme.colors.outlineVariant }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text variant="bodyMedium" style={{ fontWeight: '600' }}>{suggestion.name}</Text>
-                      <Text variant="labelSmall" style={{ color: theme.colors.primary }}>
-                        {suggestion.durationMinutes} min
-                      </Text>
-                    </View>
-                    <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                      {suggestion.description}
+              
+              {/* Smart Suggestions Section */}
+              {recoveryInfo?.smartSuggestions?.length > 0 && (
+                <>
+                  <Text variant="titleSmall" style={{ marginBottom: 8, color: theme.colors.primary }}>
+                    ✨ Recommended for You
+                  </Text>
+                  {recoveryInfo.trainedMuscles?.length > 0 && (
+                    <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12, fontStyle: 'italic' }}>
+                      Based on recent training: {recoveryInfo.trainedMuscles.map((m: string) => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
                     </Text>
-                    <Text variant="labelSmall" style={{ color: theme.colors.tertiary, fontStyle: 'italic' }}>
-                      {suggestion.rationale}
+                  )}
+                  {recoveryInfo.smartSuggestions.map((suggestion: RecoverySuggestion, idx: number) => {
+                    const isSelected = selectedRecoveryActivities.has(suggestion.name);
+                    return (
+                      <TouchableOpacity 
+                        key={`smart-${idx}`}
+                        onPress={() => {
+                          const newSet = new Set(selectedRecoveryActivities);
+                          if (isSelected) {
+                            newSet.delete(suggestion.name);
+                          } else {
+                            newSet.add(suggestion.name);
+                          }
+                          setSelectedRecoveryActivities(newSet);
+                        }}
+                        style={{ 
+                          marginBottom: 8, 
+                          padding: 12, 
+                          borderRadius: 8, 
+                          backgroundColor: isSelected ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+                          borderWidth: isSelected ? 2 : 1,
+                          borderColor: isSelected ? theme.colors.primary : theme.colors.outlineVariant,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <Text style={{ fontSize: 18, marginRight: 8 }}>
+                              {isSelected ? '☑️' : '⬜'}
+                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text variant="bodyMedium" style={{ fontWeight: '600' }}>{suggestion.name}</Text>
+                              <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                                {suggestion.description}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text variant="labelSmall" style={{ color: theme.colors.primary, marginLeft: 8 }}>
+                            {suggestion.durationMinutes} min
+                          </Text>
+                        </View>
+                        <Text variant="labelSmall" style={{ color: theme.colors.tertiary, fontStyle: 'italic', marginTop: 4, marginLeft: 26 }}>
+                          {suggestion.rationale}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* All Recovery Activities */}
+              <Text variant="titleSmall" style={{ marginTop: 16, marginBottom: 12, color: theme.colors.secondary }}>
+                📋 All Recovery Activities
+              </Text>
+              
+              {/* Group activities by type */}
+              {(['stretching', 'foam_rolling', 'yoga', 'mobility_work', 'light_walking', 'meditation'] as const).map(activityType => {
+                const activities = RECOVERY_LIBRARY.filter(a => a.type === activityType);
+                if (activities.length === 0) return null;
+                
+                const typeLabels: Record<string, string> = {
+                  stretching: '🤸 Stretching',
+                  foam_rolling: '🧱 Foam Rolling',
+                  yoga: '🧘 Yoga',
+                  mobility_work: '🔄 Mobility Work',
+                  light_walking: '🚶 Light Walking',
+                  meditation: '🧠 Meditation',
+                };
+                
+                return (
+                  <View key={activityType} style={{ marginBottom: 12 }}>
+                    <Text variant="labelMedium" style={{ marginBottom: 6, color: theme.colors.outline }}>
+                      {typeLabels[activityType] || activityType}
                     </Text>
+                    {activities.map((activity, idx) => {
+                      const isSelected = selectedRecoveryActivities.has(activity.name);
+                      return (
+                        <TouchableOpacity 
+                          key={`${activityType}-${idx}`}
+                          onPress={() => {
+                            const newSet = new Set(selectedRecoveryActivities);
+                            if (isSelected) {
+                              newSet.delete(activity.name);
+                            } else {
+                              newSet.add(activity.name);
+                            }
+                            setSelectedRecoveryActivities(newSet);
+                          }}
+                          style={{ 
+                            marginBottom: 6, 
+                            padding: 10, 
+                            borderRadius: 6, 
+                            backgroundColor: isSelected ? theme.colors.secondaryContainer : theme.colors.surface,
+                            borderWidth: 1,
+                            borderColor: isSelected ? theme.colors.secondary : theme.colors.outlineVariant,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{ fontSize: 16, marginRight: 8 }}>
+                            {isSelected ? '☑️' : '⬜'}
+                          </Text>
+                          <View style={{ flex: 1 }}>
+                            <Text variant="bodySmall" style={{ fontWeight: '500' }}>{activity.name}</Text>
+                            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
+                              {activity.description}
+                            </Text>
+                          </View>
+                          <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
+                            {activity.durationMinutes}m
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                ))}
-              </Surface>
-            )}
-          </Dialog.Content>
+                );
+              })}
+              
+              {/* Selected Summary */}
+              {selectedRecoveryActivities.size > 0 && (
+                <Surface style={{ padding: 12, borderRadius: 8, marginTop: 8, marginBottom: 16, backgroundColor: theme.colors.primaryContainer }} elevation={0}>
+                  <Text variant="labelMedium" style={{ color: theme.colors.onPrimaryContainer }}>
+                    Selected: {selectedRecoveryActivities.size} activities
+                  </Text>
+                  <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer }}>
+                    {Array.from(selectedRecoveryActivities).join(', ')}
+                  </Text>
+                </Surface>
+              )}
+            </ScrollView>
+          </Dialog.ScrollArea>
           <Dialog.Actions>
-            <Button onPress={() => setShowRecoveryDialog(false)}>Skip</Button>
+            <Button onPress={() => setShowRecoveryDialog(false)}>Close</Button>
             <Button 
               mode="contained"
               onPress={() => {
-                // Mark recovery day as complete
+                // Log recovery day to workout history with selected activities
+                const selectedList = Array.from(selectedRecoveryActivities);
+                const recoveryDay = {
+                  id: Date.now().toString(),
+                  name: selectedList.length > 0 
+                    ? `Recovery: ${selectedList.slice(0, 2).join(', ')}${selectedList.length > 2 ? ` +${selectedList.length - 2}` : ''}`
+                    : 'Active Recovery',
+                  date: new Date().toISOString(),
+                  dayType: 'active_recovery' as const,
+                  sets: [],
+                  notes: selectedList.length > 0 ? `Completed: ${selectedList.join(', ')}` : undefined,
+                };
+                workoutDispatch({ type: 'COMPLETE_WORKOUT', payload: recoveryDay });
+                
+                // Advance program day if in a program
                 if (mesoState.activeMesoCycle) {
                   mesoDispatch({ type: 'ADVANCE_DAY' });
                 }
                 setShowRecoveryDialog(false);
               }}
             >
-              Complete Recovery ✓
+              Complete ✓
             </Button>
           </Dialog.Actions>
         </Dialog>
