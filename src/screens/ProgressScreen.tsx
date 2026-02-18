@@ -5,9 +5,9 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'reac
 import { Text, Surface, useTheme, SegmentedButtons, Divider, Button, TextInput, Portal, Dialog } from 'react-native-paper';
 import { useWorkout } from '../context/WorkoutContext';
 import { useUser } from '../context/UserContext';
-import { calculate1RM_Epley } from '../utils/formulas';
+import { calculate1RM_Epley } from '../utils/formulas/formulas';
 import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import WeightGraph from '../components/WeightGraph';
+import WeightGraph from '../components/WeightGraph/WeightGraph';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

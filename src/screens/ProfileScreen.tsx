@@ -8,7 +8,7 @@ import { useUser, useWorkout, useThemeMode } from '../context';
 import { ProgressBar, InfoTooltip, ABBREVIATIONS } from '../components';
 import { soundService } from '../services/SoundService';
 import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import { calculate1RM_Epley } from '../utils/formulas';
+import { calculate1RM_Epley } from '../utils/formulas/formulas';
 import type { ActivityLevel, GoalType, OneRepMaxRecord } from '../types';
 
 interface ProfileScreenProps {

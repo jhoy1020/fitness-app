@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Text, Surface, useTheme, Chip, Divider, Portal, Dialog, TextInput, Button, SegmentedButtons } from 'react-native-paper';
 import { useWorkout } from '../context/WorkoutContext';
-import MonthCalendar from '../components/MonthCalendar';
+import MonthCalendar from '../components/MonthCalendar/MonthCalendar';
 
 // Define the shape of workout data in history
 interface HistoryWorkout {

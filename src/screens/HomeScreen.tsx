@@ -8,11 +8,11 @@ import { TouchableOpacity } from 'react-native';
 import { useWorkout, useUser, useMesoCycle } from '../context';
 import { WorkoutCard } from '../components';
 import { getAllExercises, getSetsByWorkoutId } from '../services/db';
-import { calculate1RM_Epley } from '../utils/formulas';
+import { calculate1RM_Epley } from '../utils/formulas/formulas';
 import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import { TRAINING_PROGRAMS } from '../data/programs';
-import { getRecoverySuggestions } from '../utils/recoveryEngine';
-import { RECOVERY_LIBRARY, RecoveryTemplate } from '../data/activities';
+import { TRAINING_PROGRAMS } from '../data/programs/programs';
+import { getRecoverySuggestions } from '../utils/recoveryEngine/recoveryEngine';
+import { RECOVERY_LIBRARY, RecoveryTemplate } from '../data/activities/activities';
 import type { Exercise, WorkoutSet, Workout, MuscleGroup, RecoverySuggestion } from '../types';
 
 interface EditableSet {

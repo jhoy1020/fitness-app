@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import type { ReactNode } from 'react';
 import { Platform, Vibration } from 'react-native';
 import type { TimerState, TimerAction } from '../types';
-import { TIMER } from '../utils/constants';
+import { TIMER } from '../utils/constants/constants';
 
 // Initial state
 const initialState: TimerState = {

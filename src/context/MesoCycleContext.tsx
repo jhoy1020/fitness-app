@@ -14,7 +14,7 @@ import type {
   MesoCycleWeek,
   MuscleVolumeTracker,
 } from '../types';
-import { VOLUME_LANDMARKS, MESOCYCLE, VOLUME_ADJUSTMENTS } from '../utils/constants';
+import { VOLUME_LANDMARKS, MESOCYCLE, VOLUME_ADJUSTMENTS } from '../utils/constants/constants';
 
 // All muscle groups
 const ALL_MUSCLES: MuscleGroup[] = [

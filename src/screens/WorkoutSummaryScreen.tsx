@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, SegmentedButtons } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { calculate1RM_Epley } from '../utils/formulas';
+import { calculate1RM_Epley } from '../utils/formulas/formulas';
 import { useMesoCycle } from '../context/MesoCycleContext';
 
 // Motivational messages
