@@ -2,7 +2,7 @@
 
 import { Platform } from 'react-native';
 import { Audio } from 'expo-av';
-import { Storage } from '../utils/storage';
+import { Storage } from '../../utils/storage';
 
 class SoundService {
   private audioContext: AudioContext | null = null;

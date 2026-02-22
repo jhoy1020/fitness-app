@@ -19,16 +19,16 @@ import {
   Switch,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWorkout } from '../context/WorkoutContext';
-import { useMesoCycle } from '../context/MesoCycleContext';
-import { useUser } from '../context/UserContext';
-import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import { soundService } from '../services/SoundService';
-import { calculatePlates, formatPlatesDisplay, getWarmupSets, WarmupSet } from '../utils/plateCalculator/plateCalculator';
-import { calculate1RM_Epley } from '../utils/formulas/formulas';
-import { getExerciseDemo } from '../data/exerciseVideos';
-import { InfoTooltip, ABBREVIATIONS } from '../components';
-import { CardioFinisher } from '../types';
+import { useWorkout } from '../../context/WorkoutContext';
+import { useMesoCycle } from '../../context/MesoCycleContext';
+import { useUser } from '../../context/UserContext';
+import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+import { soundService } from '../../services/SoundService/SoundService';
+import { calculatePlates, formatPlatesDisplay, getWarmupSets, WarmupSet } from '../../utils/plateCalculator/plateCalculator';
+import { calculate1RM_Epley } from '../../utils/formulas/formulas';
+import { getExerciseDemo } from '../../data/exerciseVideos';
+import { InfoTooltip, ABBREVIATIONS } from '../../components';
+import { CardioFinisher } from '../../types';
 
 // Responsive breakpoint
 const NARROW_SCREEN_WIDTH = 375;

@@ -3,8 +3,19 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Text, Surface, useTheme, Chip, Divider, Portal, Dialog, TextInput, Button, SegmentedButtons } from 'react-native-paper';
-import { useWorkout } from '../context/WorkoutContext';
-import MonthCalendar from '../components/MonthCalendar/MonthCalendar';
+import { useWorkout } from '../../context/WorkoutContext';
+import MonthCalendar from '../../components/MonthCalendar/MonthCalendar';
+import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+
+// Editable set interface for edit dialog
+interface EditableSet {
+  id: string;
+  exerciseName: string;
+  muscleGroup: string;
+  weight: string;
+  reps: string;
+  isNew?: boolean;
+}
 
 // Define the shape of workout data in history
 interface HistoryWorkout {
@@ -30,6 +41,23 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
   // Edit dialog state
   const [editingWorkout, setEditingWorkout] = useState<HistoryWorkout | null>(null);
   const [editName, setEditName] = useState('');
+  const [editSets, setEditSets] = useState<EditableSet[]>([]);
+  const [showAddSet, setShowAddSet] = useState(false);
+  const [newSetExercise, setNewSetExercise] = useState('');
+  const [newSetWeight, setNewSetWeight] = useState('');
+  const [newSetReps, setNewSetReps] = useState('');
+  const [exerciseSearch, setExerciseSearch] = useState('');
+  const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
+
+  // Filtered exercises for search dropdown
+  const filteredExercises = useMemo(() => {
+    const search = exerciseSearch.toLowerCase().trim();
+    if (!search) return EXERCISE_LIBRARY.slice(0, 10);
+    return EXERCISE_LIBRARY.filter(ex => 
+      ex.name.toLowerCase().includes(search) ||
+      ex.muscleGroup.toLowerCase().includes(search)
+    ).slice(0, 10);
+  }, [exerciseSearch]);
 
   // Cast workout history to our expected shape
   const workoutHistory = workoutState.workoutHistory as unknown as HistoryWorkout[];
@@ -94,16 +122,102 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
   const handleEdit = (workout: HistoryWorkout) => {
     setEditingWorkout(workout);
     setEditName(workout.name);
+    
+    // Load sets for editing - check both exercises array and sets array
+    const workoutAny = workout as any;
+    let loadedSets: EditableSet[] = [];
+    
+    // First try the exercises array format
+    if (workout.exercises?.length) {
+      workout.exercises.forEach(ex => {
+        ex.sets?.forEach((s, idx) => {
+          loadedSets.push({
+            id: `${ex.exerciseId}-${idx}-${Date.now()}`,
+            exerciseName: ex.exerciseName,
+            muscleGroup: '',
+            weight: s.weight?.toString() || '',
+            reps: (s.actualReps || s.targetReps)?.toString() || '',
+          });
+        });
+      });
+    }
+    
+    // Also check for sets array format (from HomeScreen workout saves)
+    if (workoutAny.sets?.length && loadedSets.length === 0) {
+      loadedSets = workoutAny.sets.map((s: any, idx: number) => ({
+        id: s.id || `set-${idx}-${Date.now()}`,
+        exerciseName: s.exerciseName || '',
+        muscleGroup: s.muscleGroup || '',
+        weight: s.weight?.toString() || '',
+        reps: s.reps?.toString() || '',
+      }));
+    }
+    
+    setEditSets(loadedSets);
+    setShowAddSet(false);
+    setNewSetExercise('');
+    setNewSetWeight('');
+    setNewSetReps('');
+    setExerciseSearch('');
+    setShowExerciseDropdown(false);
+  };
+
+  const handleUpdateSet = (setId: string, field: 'weight' | 'reps', value: string) => {
+    setEditSets(prev => prev.map(s => 
+      s.id === setId ? { ...s, [field]: value } : s
+    ));
+  };
+
+  const handleDeleteSet = (setId: string) => {
+    setEditSets(prev => prev.filter(s => s.id !== setId));
+  };
+
+  const handleAddNewSet = () => {
+    if (!newSetExercise || !newSetWeight || !newSetReps) return;
+    
+    const exercise = EXERCISE_LIBRARY.find(e => e.name === newSetExercise);
+    const newSet: EditableSet = {
+      id: Date.now().toString() + Math.random(),
+      exerciseName: newSetExercise,
+      muscleGroup: exercise?.muscleGroup || 'other',
+      weight: newSetWeight,
+      reps: newSetReps,
+      isNew: true,
+    };
+    
+    setEditSets(prev => [...prev, newSet]);
+    setShowAddSet(false);
+    setNewSetExercise('');
+    setNewSetWeight('');
+    setNewSetReps('');
+    setExerciseSearch('');
+    setShowExerciseDropdown(false);
   };
 
   const handleSaveEdit = () => {
     if (editingWorkout && editName.trim()) {
+      // Convert editSets back to proper format
+      const updatedSets = editSets.map(s => ({
+        id: s.id,
+        exerciseName: s.exerciseName,
+        muscleGroup: s.muscleGroup,
+        weight: parseFloat(s.weight) || 0,
+        reps: parseInt(s.reps) || 0,
+      }));
+      
       dispatch({
         type: 'UPDATE_WORKOUT',
-        payload: { id: editingWorkout.id, updates: { name: editName.trim() } }
+        payload: { 
+          id: editingWorkout.id, 
+          updates: { 
+            name: editName.trim(),
+            sets: updatedSets,
+          } 
+        }
       });
       setEditingWorkout(null);
       setEditName('');
+      setEditSets([]);
     }
   };
 
@@ -123,20 +237,155 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Edit Dialog */}
       <Portal>
-        <Dialog visible={!!editingWorkout} onDismiss={() => setEditingWorkout(null)}>
+        <Dialog 
+          visible={!!editingWorkout} 
+          onDismiss={() => setEditingWorkout(null)}
+          style={{ maxHeight: '85%' }}
+        >
           <Dialog.Title>Edit Workout</Dialog.Title>
-          <Dialog.Content>
-            <TextInput
-              label="Workout Name"
-              value={editName}
-              onChangeText={setEditName}
-              mode="outlined"
-              autoFocus
-            />
-          </Dialog.Content>
+          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+            <ScrollView style={{ paddingHorizontal: 24 }}>
+              <TextInput
+                label="Workout Name"
+                value={editName}
+                onChangeText={setEditName}
+                mode="outlined"
+                style={{ marginBottom: 16 }}
+              />
+              
+              <Text variant="titleSmall" style={{ marginBottom: 8 }}>Sets</Text>
+              
+              {editSets.length === 0 ? (
+                <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12 }}>
+                  No sets recorded
+                </Text>
+              ) : (
+                editSets.map((set, index) => (
+                  <View key={set.id} style={styles.editSetRow}>
+                    <Text variant="bodySmall" style={{ flex: 1 }} numberOfLines={1}>
+                      {set.exerciseName}
+                    </Text>
+                    <TextInput
+                      value={set.weight}
+                      onChangeText={(v) => handleUpdateSet(set.id, 'weight', v)}
+                      keyboardType="numeric"
+                      mode="outlined"
+                      dense
+                      style={styles.editSetInput}
+                      placeholder="lbs"
+                    />
+                    <Text style={{ marginHorizontal: 4 }}>×</Text>
+                    <TextInput
+                      value={set.reps}
+                      onChangeText={(v) => handleUpdateSet(set.id, 'reps', v)}
+                      keyboardType="numeric"
+                      mode="outlined"
+                      dense
+                      style={styles.editSetInput}
+                      placeholder="reps"
+                    />
+                    <TouchableOpacity 
+                      onPress={() => handleDeleteSet(set.id)}
+                      style={{ padding: 8 }}
+                    >
+                      <Text style={{ color: theme.colors.error }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+              
+              {/* Add New Set */}
+              {showAddSet ? (
+                <View style={styles.addSetForm}>
+                  <View style={{ position: 'relative', zIndex: 1 }}>
+                    <TextInput
+                      label="Exercise"
+                      value={newSetExercise || exerciseSearch}
+                      onChangeText={(text) => {
+                        setExerciseSearch(text);
+                        setNewSetExercise('');
+                        setShowExerciseDropdown(true);
+                      }}
+                      onFocus={() => setShowExerciseDropdown(true)}
+                      mode="outlined"
+                      dense
+                      placeholder="Search exercises..."
+                      style={{ marginBottom: showExerciseDropdown ? 0 : 8 }}
+                    />
+                    {showExerciseDropdown && (
+                      <Surface style={styles.exerciseDropdown} elevation={3}>
+                        <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+                          {filteredExercises.map((ex) => (
+                            <TouchableOpacity
+                              key={ex.name}
+                              style={styles.exerciseOption}
+                              onPress={() => {
+                                setNewSetExercise(ex.name);
+                                setExerciseSearch('');
+                                setShowExerciseDropdown(false);
+                              }}
+                            >
+                              <Text variant="bodyMedium">{ex.name}</Text>
+                              <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                                {ex.muscleGroup}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </Surface>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                    <TextInput
+                      label="Weight"
+                      value={newSetWeight}
+                      onChangeText={setNewSetWeight}
+                      keyboardType="numeric"
+                      mode="outlined"
+                      dense
+                      style={{ flex: 1 }}
+                    />
+                    <TextInput
+                      label="Reps"
+                      value={newSetReps}
+                      onChangeText={setNewSetReps}
+                      keyboardType="numeric"
+                      mode="outlined"
+                      dense
+                      style={{ flex: 1 }}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Button mode="outlined" onPress={() => {
+                      setShowAddSet(false);
+                      setExerciseSearch('');
+                      setShowExerciseDropdown(false);
+                    }} style={{ flex: 1 }}>
+                      Cancel
+                    </Button>
+                    <Button mode="contained" onPress={handleAddNewSet} style={{ flex: 1 }}>
+                      Add Set
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <Button 
+                  mode="outlined" 
+                  onPress={() => {
+                    setShowAddSet(true);
+                    setExerciseSearch('');
+                    setShowExerciseDropdown(false);
+                  }}
+                  style={{ marginTop: 8 }}
+                >
+                  + Add Set
+                </Button>
+              )}
+            </ScrollView>
+          </Dialog.ScrollArea>
           <Dialog.Actions>
             <Button onPress={() => setEditingWorkout(null)}>Cancel</Button>
-            <Button onPress={handleSaveEdit} disabled={!editName.trim()}>Save</Button>
+            <Button onPress={handleSaveEdit} disabled={!editName.trim()}>Save Changes</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -435,6 +684,35 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(100,130,153,0.2)',
+  },
+  editSetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 4,
+  },
+  editSetInput: {
+    width: 60,
+    textAlign: 'center',
+  },
+  addSetForm: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: 'rgba(100,130,153,0.1)',
+    borderRadius: 8,
+  },
+  exerciseDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  exerciseOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(100,130,153,0.1)',
   },
 });
 

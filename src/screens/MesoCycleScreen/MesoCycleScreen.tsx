@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, Surface, useTheme, Button, ProgressBar, Portal, Dialog, Divider } from 'react-native-paper';
-import { useMesoCycle } from '../context/MesoCycleContext';
-import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../utils/constants/constants';
-import type { MuscleGroup } from '../types';
+import { useMesoCycle } from '../../context/MesoCycleContext';
+import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
+import type { MuscleGroup } from '../../types';
 
 interface MesoCycleScreenProps {
   navigation: any;

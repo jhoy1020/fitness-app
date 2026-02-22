@@ -4,12 +4,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, TextInput, Button, SegmentedButtons, Surface, useTheme, Divider, Switch, Portal, Dialog, Searchbar } from 'react-native-paper';
-import { useUser, useWorkout, useThemeMode } from '../context';
-import { ProgressBar, InfoTooltip, ABBREVIATIONS } from '../components';
-import { soundService } from '../services/SoundService';
-import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import { calculate1RM_Epley } from '../utils/formulas/formulas';
-import type { ActivityLevel, GoalType, OneRepMaxRecord } from '../types';
+import { useUser, useWorkout, useThemeMode } from '../../context';
+import { ProgressBar, InfoTooltip, ABBREVIATIONS } from '../../components';
+import { soundService } from '../../services/SoundService/SoundService';
+import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+import { calculate1RM_Epley } from '../../utils/formulas/formulas';
+import type { ActivityLevel, GoalType, OneRepMaxRecord } from '../../types';
 
 interface ProfileScreenProps {
   navigation: any;

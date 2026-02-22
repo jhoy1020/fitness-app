@@ -15,11 +15,11 @@ import {
   Divider,
   IconButton
 } from 'react-native-paper';
-import { useMesoCycle } from '../context/MesoCycleContext';
-import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import type { MuscleGroup, ProgramDayTemplate, ProgramExerciseTemplate, TrainingProgram, DayType, CardioFinisher, RecoverySuggestion } from '../types';
-import { MUSCLE_GROUP_LABELS } from '../utils/constants/constants';
-import { CARDIO_FINISHERS, RECOVERY_LIBRARY } from '../data/activities/activities';
+import { useMesoCycle } from '../../context/MesoCycleContext';
+import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+import type { MuscleGroup, ProgramDayTemplate, ProgramExerciseTemplate, TrainingProgram, DayType, CardioFinisher, RecoverySuggestion } from '../../types';
+import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
+import { CARDIO_FINISHERS, RECOVERY_LIBRARY } from '../../data/activities/activities';
 
 interface CreateProgramScreenProps {
   navigation: any;

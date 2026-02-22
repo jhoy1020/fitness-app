@@ -5,15 +5,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, TextInput, ProgressBar, IconButton } from 'react-native-paper';
 import { TouchableOpacity } from 'react-native';
-import { useWorkout, useUser, useMesoCycle } from '../context';
-import { WorkoutCard } from '../components';
-import { getAllExercises, getSetsByWorkoutId } from '../services/db';
-import { calculate1RM_Epley } from '../utils/formulas/formulas';
-import { EXERCISE_LIBRARY } from '../services/db/exerciseLibrary';
-import { TRAINING_PROGRAMS } from '../data/programs/programs';
-import { getRecoverySuggestions } from '../utils/recoveryEngine/recoveryEngine';
-import { RECOVERY_LIBRARY, RecoveryTemplate } from '../data/activities/activities';
-import type { Exercise, WorkoutSet, Workout, MuscleGroup, RecoverySuggestion } from '../types';
+import { useWorkout, useUser, useMesoCycle } from '../../context';
+import { WorkoutCard } from '../../components';
+import { getAllExercises, getSetsByWorkoutId } from '../../services/db';
+import { calculate1RM_Epley } from '../../utils/formulas/formulas';
+import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+import { TRAINING_PROGRAMS } from '../../data/programs/programs';
+import { getRecoverySuggestions } from '../../utils/recoveryEngine/recoveryEngine';
+import { RECOVERY_LIBRARY, RecoveryTemplate } from '../../data/activities/activities';
+import type { Exercise, WorkoutSet, Workout, MuscleGroup, RecoverySuggestion, CardioType } from '../../types';
 
 interface EditableSet {
   id: string;
@@ -23,6 +23,20 @@ interface EditableSet {
   reps: string;
   isNew?: boolean;
 }
+
+// Cardio type options with display names and emoji
+const CARDIO_OPTIONS: { type: CardioType; label: string; emoji: string }[] = [
+  { type: 'running', label: 'Running', emoji: '🏃' },
+  { type: 'cycling', label: 'Cycling', emoji: '🚴' },
+  { type: 'walking', label: 'Walking', emoji: '🚶' },
+  { type: 'swimming', label: 'Swimming', emoji: '🏊' },
+  { type: 'rowing', label: 'Rowing', emoji: '🚣' },
+  { type: 'elliptical', label: 'Elliptical', emoji: '⭕' },
+  { type: 'stair_climber', label: 'Stair Climber', emoji: '🪜' },
+  { type: 'hiit', label: 'HIIT', emoji: '⚡' },
+  { type: 'jump_rope', label: 'Jump Rope', emoji: '🪢' },
+  { type: 'other', label: 'Other', emoji: '🏋️' },
+];
 
 interface HomeScreenProps {
   navigation: any;
@@ -63,6 +77,17 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null);
   const [deleteConfirmSet, setDeleteConfirmSet] = useState<string | null>(null);
   const [deleteConfirmNewSet, setDeleteConfirmNewSet] = useState<string | null>(null);
+  
+  // Log Cardio Workout state
+  const [showLogCardio, setShowLogCardio] = useState(false);
+  const [cardioWorkoutType, setCardioWorkoutType] = useState<CardioType>('running');
+  const [cardioName, setCardioName] = useState('');
+  const [cardioDate, setCardioDate] = useState('');
+  const [cardioDuration, setCardioDuration] = useState('');  // in minutes
+  const [cardioDistance, setCardioDistance] = useState('');  // in miles
+  const [cardioCalories, setCardioCalories] = useState('');
+  const [cardioNotes, setCardioNotes] = useState('');
+  const [cardioAvgHR, setCardioAvgHR] = useState('');
   
   // Rest/Cardio/Recovery day dialogs
   const [showRestDayDialog, setShowRestDayDialog] = useState(false);
@@ -144,9 +169,42 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     setExercises(allExercises);
 
     // Load sets for recent workouts
+    // Sets may be stored in DB or embedded in the workout object
     const setsMap: Record<string, WorkoutSet[]> = {};
     for (const workout of workoutState.workoutHistory.slice(0, 5)) {
-      const sets = await getSetsByWorkoutId(workout.id);
+      // First try to get sets from the database
+      let sets = await getSetsByWorkoutId(workout.id);
+      
+      // If no sets in DB, try to use embedded sets from workout object
+      if (sets.length === 0 && (workout as any).sets?.length > 0) {
+        const embeddedSets = (workout as any).sets as Array<{
+          exerciseName?: string;
+          muscleGroup?: string;
+          weight: number;
+          reps: number;
+          rir?: number;
+          isWarmup?: boolean;
+        }>;
+        
+        // Transform embedded sets to WorkoutSet format
+        sets = embeddedSets.map((s, index) => {
+          // Find exerciseId by name
+          const exercise = allExercises.find(e => e.name === s.exerciseName);
+          return {
+            id: `${workout.id}-${index}`,
+            workoutId: workout.id,
+            exerciseId: exercise?.id || s.exerciseName || 'unknown',
+            setNumber: index + 1,
+            weight: s.weight,
+            weightUnit: 'lbs' as const,
+            reps: s.reps,
+            rir: s.rir,
+            isWarmup: s.isWarmup || false,
+            createdAt: workout.date,
+          };
+        });
+      }
+      
       setsMap[workout.id] = sets;
     }
     setWorkoutSets(setsMap);
@@ -240,6 +298,60 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     setNewWorkoutDate(today);
     setNewWorkoutSets([]);
     setAddingSetToNew(false);
+  };
+
+  // Log cardio workout functions
+  const handleOpenLogCardio = () => {
+    setShowLogCardio(true);
+    setCardioWorkoutType('running');
+    setCardioName('');
+    const today = new Date().toISOString().split('T')[0];
+    setCardioDate(today);
+    setCardioDuration('');
+    setCardioDistance('');
+    setCardioCalories('');
+    setCardioNotes('');
+    setCardioAvgHR('');
+  };
+
+  const handleSaveCardioWorkout = () => {
+    if (!cardioDuration) return;
+    
+    const cardioOption = CARDIO_OPTIONS.find(c => c.type === cardioWorkoutType);
+    const workoutName = cardioName.trim() || `${cardioOption?.emoji} ${cardioOption?.label || 'Cardio'}`;
+    const durationMinutes = parseFloat(cardioDuration) || 0;
+    const distanceMiles = cardioDistance ? parseFloat(cardioDistance) : undefined;
+    
+    // Calculate pace if both duration and distance are provided
+    let paceMinPerMile: number | undefined;
+    if (distanceMiles && distanceMiles > 0 && durationMinutes > 0) {
+      paceMinPerMile = durationMinutes / distanceMiles;
+    }
+    
+    const cardioWorkout: Workout = {
+      id: Date.now().toString(),
+      name: workoutName,
+      date: cardioDate || new Date().toISOString().split('T')[0],
+      dayType: 'cardio',
+      cardioType: cardioWorkoutType,
+      durationMinutes,
+      distanceMiles,
+      paceMinPerMile,
+      caloriesBurned: cardioCalories ? parseInt(cardioCalories) : undefined,
+      avgHeartRate: cardioAvgHR ? parseInt(cardioAvgHR) : undefined,
+      notes: cardioNotes || undefined,
+      sets: [],
+    };
+    
+    workoutDispatch({ type: 'COMPLETE_WORKOUT', payload: cardioWorkout });
+    setShowLogCardio(false);
+  };
+
+  // Format pace for display (e.g., "8:30 /mi")
+  const formatPace = (paceMinPerMile: number): string => {
+    const minutes = Math.floor(paceMinPerMile);
+    const seconds = Math.round((paceMinPerMile - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')} /mi`;
   };
 
   const handleAddSetToNewWorkout = () => {
@@ -1145,6 +1257,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               <Button mode="text" compact onPress={handleOpenAddWorkout}>
                 + Add Past
               </Button>
+              <Button mode="text" compact onPress={handleOpenLogCardio}>
+                + Cardio
+              </Button>
               <Button mode="text" compact onPress={() => navigation.navigate('History')}>
                 See All
               </Button>
@@ -1156,13 +1271,20 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               <Text variant="bodyMedium" style={{ color: theme.colors.outline, textAlign: 'center' }}>
                 No workouts yet. Start your first workout!
               </Text>
-              <Button 
-                mode="outlined" 
-                onPress={handleOpenAddWorkout}
-                style={{ marginTop: 12 }}
-              >
-                + Log a Past Workout
-              </Button>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 12, justifyContent: 'center' }}>
+                <Button 
+                  mode="outlined" 
+                  onPress={handleOpenAddWorkout}
+                >
+                  + Strength
+                </Button>
+                <Button 
+                  mode="outlined" 
+                  onPress={handleOpenLogCardio}
+                >
+                  + Cardio
+                </Button>
+              </View>
             </Surface>
           ) : (
             recentWorkouts.map((workout) => (
@@ -1519,6 +1641,138 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             <Button onPress={() => setShowAddWorkout(false)}>Cancel</Button>
             <Button onPress={handleSaveNewWorkout} disabled={newWorkoutSets.length === 0}>
               Save Workout
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Log Cardio Workout Dialog */}
+      <Portal>
+        <Dialog 
+          visible={showLogCardio} 
+          onDismiss={() => setShowLogCardio(false)}
+          style={{ maxHeight: '85%' }}
+        >
+          <Dialog.Title>Log Cardio Workout</Dialog.Title>
+          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+            <ScrollView style={{ paddingHorizontal: 24 }}>
+              <Text variant="titleSmall" style={{ marginBottom: 8 }}>Cardio Type</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {CARDIO_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.type}
+                    onPress={() => setCardioWorkoutType(option.type)}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: cardioWorkoutType === option.type 
+                        ? theme.colors.primaryContainer 
+                        : theme.colors.surfaceVariant,
+                      borderWidth: cardioWorkoutType === option.type ? 2 : 0,
+                      borderColor: theme.colors.primary,
+                    }}
+                  >
+                    <Text 
+                      variant="bodyMedium"
+                      style={{ 
+                        color: cardioWorkoutType === option.type 
+                          ? theme.colors.onPrimaryContainer 
+                          : theme.colors.onSurfaceVariant 
+                      }}
+                    >
+                      {option.emoji} {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <TextInput
+                label="Workout Name (optional)"
+                value={cardioName}
+                onChangeText={setCardioName}
+                mode="outlined"
+                placeholder={`${CARDIO_OPTIONS.find(c => c.type === cardioWorkoutType)?.emoji} ${CARDIO_OPTIONS.find(c => c.type === cardioWorkoutType)?.label}`}
+                style={{ marginBottom: 12 }}
+              />
+              
+              <TextInput
+                label="Date (YYYY-MM-DD)"
+                value={cardioDate}
+                onChangeText={setCardioDate}
+                mode="outlined"
+                placeholder="2026-02-08"
+                style={{ marginBottom: 12 }}
+              />
+              
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                <TextInput
+                  label="Duration (min) *"
+                  value={cardioDuration}
+                  onChangeText={setCardioDuration}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  placeholder="30"
+                  style={{ flex: 1 }}
+                />
+                <TextInput
+                  label="Distance (mi)"
+                  value={cardioDistance}
+                  onChangeText={setCardioDistance}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  placeholder="3.1"
+                  style={{ flex: 1 }}
+                />
+              </View>
+              
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                <TextInput
+                  label="Calories Burned"
+                  value={cardioCalories}
+                  onChangeText={setCardioCalories}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  placeholder="250"
+                  style={{ flex: 1 }}
+                />
+                <TextInput
+                  label="Avg Heart Rate"
+                  value={cardioAvgHR}
+                  onChangeText={setCardioAvgHR}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  placeholder="145"
+                  style={{ flex: 1 }}
+                />
+              </View>
+              
+              <TextInput
+                label="Notes (optional)"
+                value={cardioNotes}
+                onChangeText={setCardioNotes}
+                mode="outlined"
+                placeholder="How did it feel?"
+                multiline
+                numberOfLines={3}
+                style={{ marginBottom: 12 }}
+              />
+              
+              {/* Show calculated pace if distance provided */}
+              {cardioDuration && cardioDistance && parseFloat(cardioDistance) > 0 && (
+                <Surface style={{ padding: 12, borderRadius: 8, marginBottom: 12 }} elevation={1}>
+                  <Text variant="bodySmall" style={{ color: theme.colors.outline }}>Calculated Pace</Text>
+                  <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
+                    {formatPace(parseFloat(cardioDuration) / parseFloat(cardioDistance))}
+                  </Text>
+                </Surface>
+              )}
+            </ScrollView>
+          </Dialog.ScrollArea>
+          <Dialog.Actions>
+            <Button onPress={() => setShowLogCardio(false)}>Cancel</Button>
+            <Button onPress={handleSaveCardioWorkout} disabled={!cardioDuration}>
+              Save Cardio
             </Button>
           </Dialog.Actions>
         </Dialog>

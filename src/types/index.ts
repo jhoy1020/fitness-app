@@ -90,6 +90,26 @@ export interface CardioFinisher {
   caloriesBurned?: number;  // Estimated calories
 }
 
+// Ab finisher for workout days
+export type AbFinisherType = 'circuits' | 'emom' | 'amrap' | 'straight_sets';
+
+export interface AbFinisherExercise {
+  name: string;
+  reps?: number;  // Number of reps
+  duration?: number;  // Seconds (for planks, etc.)
+}
+
+export interface AbFinisher {
+  name: string;
+  type: AbFinisherType;
+  exercises: AbFinisherExercise[];
+  rounds?: number;  // For circuits
+  durationMinutes?: number;  // Total time for EMOM/AMRAP
+  restBetweenExercises?: number;  // Seconds
+  restBetweenRounds?: number;  // Seconds
+  description?: string;
+}
+
 export type Equipment =
   | 'barbell'
   | 'dumbbell'
@@ -157,6 +177,16 @@ export interface Workout {
   updatedAt?: string;
   // Day type tracking
   dayType?: DayType;  // 'workout' | 'rest' | 'cardio' | 'active_recovery'
+  // Cardio-specific data
+  cardioType?: CardioType;
+  distanceMiles?: number;
+  distanceKm?: number;
+  paceMinPerMile?: number;
+  paceMinPerKm?: number;
+  caloriesBurned?: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;
+  elevationGainFt?: number;
   // Sets logged during workout
   sets?: Array<{
     exerciseName: string;
@@ -402,6 +432,7 @@ export interface ProgramDayTemplate {
   cardioActivities?: CardioActivity[];  // For cardio days
   recoveryActivities?: ActiveRecoveryActivity[];  // For active recovery days
   cardioFinisher?: CardioFinisher;  // Optional cardio finisher for workout days
+  abFinisher?: AbFinisher;  // Optional ab finisher for workout days
   recoverySuggestions?: RecoverySuggestion[];  // Smart suggestions for rest/recovery days
   notes?: string;  // Optional notes for the day
 }

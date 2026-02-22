@@ -3,11 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, Surface, useTheme, Chip, Button, Portal, Dialog, Divider } from 'react-native-paper';
-import { useMesoCycle } from '../context/MesoCycleContext';
-import { useUser } from '../context/UserContext';
-import { TRAINING_PROGRAMS } from '../data/programs/programs';
-import type { TrainingProgram, MuscleGroup } from '../types';
-import { MUSCLE_GROUP_LABELS } from '../utils/constants/constants';
+import { useMesoCycle } from '../../context/MesoCycleContext';
+import { useUser } from '../../context/UserContext';
+import { TRAINING_PROGRAMS } from '../../data/programs/programs';
+import type { TrainingProgram, MuscleGroup } from '../../types';
+import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 
 interface ProgramsScreenProps {
   navigation: any;
