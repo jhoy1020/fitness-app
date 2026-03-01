@@ -1023,66 +1023,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           />
         )}
 
-        {/* Debug Panel for Testing - Dev Only */}
-        {__DEV__ && mesoState.activeMesoCycle && (
-          <Surface style={[styles.debugCard, { borderColor: withAlpha((theme.colors as any).warning, 0.4), backgroundColor: withAlpha((theme.colors as any).warning, 0.05) }]} elevation={1}>
-            <Text variant="titleSmall" style={{ marginBottom: 8 }}>🧪 Test Workout Progression</Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12 }}>
-              Week {mesoState.activeMesoCycle.currentWeek}/{mesoState.activeMesoCycle.totalWeeks} • Day {getNextProgramWorkout?.dayNumber || '?'}/{getNextProgramWorkout?.totalDays || '?'} - {getNextProgramWorkout?.name || 'N/A'}
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <Button
-                mode="contained-tonal"
-                compact
-                onPress={() => {
-                  mesoDispatch({
-                    type: 'RECORD_WORKOUT_COMPLETION',
-                    payload: { workoutId: `test-${Date.now()}`, volumeByMuscle: {} }
-                  });
-                }}
-              >
-                +1 Day
-              </Button>
-              <Button
-                mode="contained-tonal"
-                compact
-                onPress={() => {
-                  if (mesoState.activeMesoCycle) {
-                    // Jump to next week by setting completedWorkouts
-                    const daysPerWeek = getNextProgramWorkout?.totalDays || 3;
-                    const currentCompleted = mesoState.activeMesoCycle.completedWorkouts || 0;
-                    const nextWeekStart = Math.ceil((currentCompleted + 1) / daysPerWeek) * daysPerWeek;
-                    const newWeek = Math.min(
-                      Math.floor(nextWeekStart / daysPerWeek) + 1,
-                      mesoState.activeMesoCycle.totalWeeks
-                    );
-                    const updatedMeso = { 
-                      ...mesoState.activeMesoCycle, 
-                      completedWorkouts: nextWeekStart,
-                      currentWeek: newWeek
-                    };
-                    mesoDispatch({ type: 'UPDATE_MESOCYCLE', payload: updatedMeso });
-                  }
-                }}
-              >
-                +1 Week
-              </Button>
-              <Button
-                mode="outlined"
-                compact
-                onPress={() => {
-                  if (mesoState.activeMesoCycle) {
-                    const resetMeso = { ...mesoState.activeMesoCycle, completedWorkouts: 0, currentWeek: 1 };
-                    mesoDispatch({ type: 'UPDATE_MESOCYCLE', payload: resetMeso });
-                  }
-                }}
-              >
-                Reset
-              </Button>
-            </View>
-          </Surface>
-        )}
-
         {/* Fatigue & Volume Indicators (when program active) */}
         {mesoState.activeMesoCycle && Object.values(mesoState.muscleFatigue).some(f => f.currentFatigue > 30) && (
           <Surface style={styles.fatigueCard} elevation={1}>
@@ -2390,14 +2330,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'visible' as const,
-  },
-  debugCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'transparent',  // set inline from theme
-    backgroundColor: 'transparent',  // set inline from theme
   },
   mesoHeader: {
     flexDirection: 'row',
