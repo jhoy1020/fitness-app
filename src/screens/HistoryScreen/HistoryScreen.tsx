@@ -6,6 +6,9 @@ import { Text, Surface, useTheme, Chip, Divider, Portal, Dialog, TextInput, Butt
 import { useWorkout } from '../../context/WorkoutContext';
 import MonthCalendar from '../../components/MonthCalendar/MonthCalendar';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { withAlpha } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 // Editable set interface for edit dialog
 interface EditableSet {
@@ -318,7 +321,7 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
                           {filteredExercises.map((ex) => (
                             <TouchableOpacity
                               key={ex.name}
-                              style={styles.exerciseOption}
+                              style={[styles.exerciseOption, { borderBottomColor: withAlpha(theme.colors.outline, 0.1) }]}
                               onPress={() => {
                                 setNewSetExercise(ex.name);
                                 setExerciseSearch('');
@@ -394,7 +397,7 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
       <View style={styles.searchContainer}>
         <Surface style={styles.searchbar} elevation={1}>
           <View style={styles.searchInner}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+            <MaterialCommunityIcons name={AppIcons.search} size={16} color={theme.colors.onSurfaceVariant} style={{ marginRight: 8 }} />
             <TextInput
               placeholder="Search workouts..."
               onChangeText={setSearch}
@@ -406,7 +409,7 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')}>
-                <Text style={{ fontSize: 16 }}>✕</Text>
+                <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.onSurfaceVariant} />
               </TouchableOpacity>
             )}
           </View>
@@ -418,11 +421,12 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
         <TouchableOpacity
           style={[
             styles.viewToggleBtn,
+            { backgroundColor: withAlpha(theme.colors.outline, 0.1) },
             viewMode === 'list' && { backgroundColor: theme.colors.primaryContainer }
           ]}
           onPress={() => setViewMode('list')}
         >
-          <Text style={{ fontSize: 16 }}>📋</Text>
+          <MaterialCommunityIcons name={AppIcons.clipboard} size={16} color={viewMode === 'list' ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant} />
           <Text 
             variant="labelMedium" 
             style={{ 
@@ -436,11 +440,12 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
         <TouchableOpacity
           style={[
             styles.viewToggleBtn,
+            { backgroundColor: withAlpha(theme.colors.outline, 0.1) },
             viewMode === 'calendar' && { backgroundColor: theme.colors.primaryContainer }
           ]}
           onPress={() => setViewMode('calendar')}
         >
-          <Text style={{ fontSize: 16 }}>📅</Text>
+          <MaterialCommunityIcons name={AppIcons.calendar} size={16} color={viewMode === 'calendar' ? theme.colors.onPrimaryContainer : theme.colors.onSurfaceVariant} />
           <Text 
             variant="labelMedium" 
             style={{ 
@@ -510,7 +515,7 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
                         }}
                         style={styles.actionButton}
                       >
-                        <Text style={{ fontSize: 18 }}>✏️</Text>
+                        <MaterialCommunityIcons name={AppIcons.edit} size={18} color={theme.colors.onSurfaceVariant} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={(e) => {
@@ -519,7 +524,7 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
                         }}
                         style={styles.actionButton}
                       >
-                        <Text style={{ fontSize: 18 }}>🗑️</Text>
+                        <MaterialCommunityIcons name={AppIcons.delete} size={18} color={theme.colors.error} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -555,7 +560,7 @@ export function HistoryScreen({ navigation }: { navigation: any }) {
 
                   {/* Exercise preview */}
                   {workout.exercises && workout.exercises.length > 0 && (
-                    <View style={styles.exercisePreview}>
+                    <View style={[styles.exercisePreview, { borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
                       {workout.exercises.slice(0, 3).map((ex, i) => (
                         <Text 
                           key={i} 
@@ -646,7 +651,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(100,130,153,0.1)',
+    backgroundColor: 'transparent',
   },
   workoutCard: {
     padding: 16,
@@ -683,7 +688,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100,130,153,0.2)',
+    borderTopColor: 'transparent',
   },
   editSetRow: {
     flexDirection: 'row',
@@ -698,7 +703,7 @@ const styles = StyleSheet.create({
   addSetForm: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: 'rgba(100,130,153,0.1)',
+    backgroundColor: 'transparent',
     borderRadius: 8,
   },
   exerciseDropdown: {
@@ -712,7 +717,7 @@ const styles = StyleSheet.create({
   exerciseOption: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.1)',
+    borderBottomColor: 'transparent',
   },
 });
 

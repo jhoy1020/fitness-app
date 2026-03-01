@@ -6,6 +6,9 @@ import { Text, Surface, useTheme, Button, ProgressBar, Portal, Dialog, Divider }
 import { useMesoCycle } from '../../context/MesoCycleContext';
 import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import type { MuscleGroup } from '../../types';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { statusColors } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 interface MesoCycleScreenProps {
   navigation: any;
@@ -24,7 +27,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.emptyState}>
-          <Text style={{ fontSize: 64, marginBottom: 16 }}>📖</Text>
+          <MaterialCommunityIcons name="book-open-variant" size={64} color={theme.colors.onBackground} style={{ marginBottom: 16 }} />
           <Text variant="headlineSmall" style={{ textAlign: 'center', marginBottom: 8 }}>
             No Active Program
           </Text>
@@ -130,7 +133,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
         {shouldTriggerDeload() && !isDeloadWeek && (
           <TouchableOpacity onPress={() => setShowDeloadDialog(true)}>
             <Surface style={[styles.warningCard, { backgroundColor: theme.colors.errorContainer }]} elevation={1}>
-              <Text style={{ fontSize: 24, marginRight: 12 }}>⚠️</Text>
+              <MaterialCommunityIcons name="alert" size={24} color={theme.colors.onErrorContainer} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
                 <Text variant="titleSmall" style={{ color: theme.colors.onErrorContainer }}>
                   High Fatigue Detected
@@ -145,7 +148,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
 
         {/* Feedback Summary */}
         <Surface style={styles.card} elevation={1}>
-          <Text variant="titleMedium" style={styles.cardTitle}>📊 Recent Performance</Text>
+          <Text variant="titleMedium" style={styles.cardTitle}>Recent Performance</Text>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text variant="headlineMedium" style={{ color: theme.colors.primary }}>
@@ -154,7 +157,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
               <Text variant="labelSmall">Avg Performance</Text>
             </View>
             <View style={styles.statItem}>
-              <Text variant="headlineMedium" style={{ color: parseFloat(avgSoreness as string) > 1.5 ? theme.colors.error : '#00E676' }}>
+              <Text variant="headlineMedium" style={{ color: parseFloat(avgSoreness as string) > 1.5 ? theme.colors.error : statusColors.beginner }}>
                 {avgSoreness}
               </Text>
               <Text variant="labelSmall">Avg Soreness</Text>
@@ -171,7 +174,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
         {/* Volume Overview */}
         <Surface style={styles.card} elevation={1}>
           <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={styles.cardTitle}>💪 Volume Status</Text>
+            <Text variant="titleMedium" style={styles.cardTitle}>Volume Status</Text>
             <Button mode="text" compact onPress={() => navigation.navigate('VolumeTracker')}>
               See All
             </Button>
@@ -213,14 +216,14 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
 
         {/* Actions */}
         <Surface style={styles.card} elevation={1}>
-          <Text variant="titleMedium" style={styles.cardTitle}>⚙️ Actions</Text>
+          <Text variant="titleMedium" style={styles.cardTitle}>Actions</Text>
           
           <TouchableOpacity 
             style={styles.actionRow}
             onPress={handleAdvanceWeek}
             disabled={meso.currentWeek >= meso.totalWeeks}
           >
-            <Text style={{ fontSize: 20 }}>⏭️</Text>
+            <MaterialCommunityIcons name="skip-forward" size={20} color={theme.colors.onSurface} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text variant="bodyLarge">Advance to Next Week</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -236,7 +239,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
             onPress={() => setShowDeloadDialog(true)}
             disabled={isDeloadWeek}
           >
-            <Text style={{ fontSize: 20 }}>🛌</Text>
+            <MaterialCommunityIcons name={AppIcons.rest} size={20} color={theme.colors.onSurface} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text variant="bodyLarge">Trigger Deload</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -251,7 +254,7 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
             style={styles.actionRow}
             onPress={() => setShowEndDialog(true)}
           >
-            <Text style={{ fontSize: 20 }}>🏁</Text>
+            <MaterialCommunityIcons name="flag-checkered" size={20} color={theme.colors.error} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text variant="bodyLarge" style={{ color: theme.colors.error }}>End Mesocycle</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.outline }}>

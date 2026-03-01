@@ -120,6 +120,12 @@ export type Equipment =
   | 'bands'
   | 'other';
 
+// How an exercise is tracked/logged
+// weight_reps: standard weight × reps (default)
+// duration: sets × seconds (planks, holds)
+// weight_duration: weight × seconds (carries, weighted holds)
+export type ExerciseTrackingType = 'weight_reps' | 'duration' | 'weight_duration';
+
 export type GoalType = 'cut' | 'bulk' | 'maintain';
 
 export type ActivityLevel =
@@ -135,6 +141,7 @@ export interface Exercise {
   muscleGroup: MuscleGroup;
   secondaryMuscles?: MuscleGroup[];
   equipment: Equipment;
+  trackingType?: ExerciseTrackingType; // defaults to 'weight_reps'
   defaultRestSeconds: number;
   instructions?: string;
   isCustom: boolean;
@@ -218,6 +225,7 @@ export interface WorkoutSet {
   weight: number;
   weightUnit: 'lbs' | 'kg';
   reps: number;
+  durationSeconds?: number; // For duration-based exercises (planks, holds, carries)
   rpe?: number; // 1-10 scale
   rir?: number; // Reps In Reserve (0-4)
   isWarmup: boolean;
@@ -518,6 +526,27 @@ export interface OneRepMaxEstimate {
   calculatedAt: string;
 }
 
+// Paused Workout - saved when user navigates away from active workout
+export interface PausedWorkout {
+  workoutName: string;
+  workoutNotes: string;
+  exercises: any[]; // WorkoutExercise[] from ActiveWorkoutScreen
+  restTarget: number;
+  timerSeconds: number;
+  isProgramWorkout: boolean;
+  pausedAt: string; // ISO date string
+  cardioFinisher?: any;
+}
+
+// Deload detection state
+export interface DeloadState {
+  lastAnalysis: string | null;
+  lastDeloadDate: string | null;
+  isDismissed: boolean;
+  isInDeloadWeek: boolean;
+  deloadStartDate: string | null;
+}
+
 // Context State Types
 
 export interface WorkoutState {
@@ -528,6 +557,8 @@ export interface WorkoutState {
   restTimeRemaining: number;
   workoutHistory: Workout[];
   templates: WorkoutTemplate[];
+  pausedWorkout: PausedWorkout | null;
+  deloadState: DeloadState;
 }
 
 // 1RM (One Rep Max) Record
@@ -576,7 +607,13 @@ export type WorkoutAction =
   | { type: 'STOP_REST_TIMER' }
   | { type: 'COMPLETE_WORKOUT'; payload: any }
   | { type: 'DELETE_WORKOUT'; payload: string }
-  | { type: 'UPDATE_WORKOUT'; payload: { id: string; updates: Partial<any> } };
+  | { type: 'UPDATE_WORKOUT'; payload: { id: string; updates: Partial<any> } }
+  | { type: 'PAUSE_WORKOUT'; payload: PausedWorkout }
+  | { type: 'CLEAR_PAUSED_WORKOUT' }
+  | { type: 'SET_DELOAD_STATE'; payload: DeloadState }
+  | { type: 'START_DELOAD_WEEK' }
+  | { type: 'END_DELOAD_WEEK' }
+  | { type: 'DISMISS_DELOAD' };
 
 export type UserAction =
   | { type: 'SET_PROFILE'; payload: UserProfile }

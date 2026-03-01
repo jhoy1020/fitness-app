@@ -4,8 +4,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, Checkbox, Text, useTheme, Surface, Menu } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { WorkoutSet } from '../../types';
 import { RPE_DESCRIPTIONS } from '../../utils/constants/constants';
+import { statusColors } from '../../theme';
 
 interface SetInputProps {
   setNumber: number;
@@ -137,7 +139,7 @@ export function SetInput({
               onPress={() => setRpeMenuVisible(true)}
               style={{ padding: 8, borderWidth: 1, borderColor: rpe ? theme.colors.primary : theme.colors.outline, borderRadius: 20 }}
             >
-              <Text style={{ fontSize: 14 }}>{rpe ? `RPE ${rpe}` : '📊'}</Text>
+              <Text style={{ fontSize: 14 }}>{rpe ? `RPE ${rpe}` : <MaterialCommunityIcons name="chart-bar" size={14} color={theme.colors.outline} />}</Text>
             </TouchableOpacity>
           }
         >
@@ -174,7 +176,7 @@ export function SetInput({
             onPress={onComplete}
             style={{ padding: 8, backgroundColor: theme.colors.primary, borderRadius: 20 }}
           >
-            <Text style={{ color: '#fff' }}>✓</Text>
+            <MaterialCommunityIcons name="check" size={16} color={theme.colors.onPrimary} />
           </TouchableOpacity>
         )}
         
@@ -183,7 +185,7 @@ export function SetInput({
             onPress={onDelete}
             style={{ padding: 8 }}
           >
-            <Text style={{ fontSize: 16 }}>🗑</Text>
+            <MaterialCommunityIcons name="delete" size={16} color={theme.colors.error} />
           </TouchableOpacity>
         )}
       </View>
@@ -211,7 +213,7 @@ const styles = StyleSheet.create({
   },
   completedContainer: {
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: statusColors.beginner,
   },
   row: {
     flexDirection: 'row',

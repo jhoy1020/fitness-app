@@ -6,10 +6,12 @@ import { View, StyleSheet, useColorScheme, useWindowDimensions, TouchableOpacity
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabBar } from '@react-navigation/bottom-tabs';
-import { Provider as PaperProvider, ActivityIndicator, Text, Surface } from 'react-native-paper';
+import { Provider as PaperProvider, ActivityIndicator, Text, Surface, useTheme } from 'react-native-paper';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { lightTheme, darkTheme } from './src/theme';
+import { lightTheme, darkTheme, NARROW_SCREEN_WIDTH, withAlpha, spacing } from './src/theme';
+import { AppIcons } from './src/theme/icons';
 import { WorkoutProvider, UserProvider, TimerProvider, MesoCycleProvider, ThemeProvider, useThemeMode } from './src/context';
 import { initDatabase, seedExercises, EXERCISE_LIBRARY } from './src/services/db';
 import {
@@ -23,6 +25,7 @@ import {
   VolumeTrackerScreen,
   MesoCycleScreen,
   CreateProgramScreen,
+  WorkoutDetailScreen,
 } from './src/screens';
 
 // Navigation types
@@ -51,42 +54,50 @@ type MainTabParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Breakpoint for narrow screens (hamburger menu threshold)
-// Set to 400px to trigger on small phones like iPhone SE
-const NARROW_SCREEN_WIDTH = 400;
-
-// Tab configuration
+// Tab configuration — icons reference the centralized AppIcons map
 const TAB_CONFIG = [
-  { name: 'Home' as const, title: 'Dashboard', icon: '🏠', component: HomeScreen },
-  { name: 'Programs' as const, title: 'Programs', icon: '📝', component: ProgramsScreen },
-  { name: 'History' as const, title: 'History', icon: '📋', component: HistoryScreen },
-  { name: 'Progress' as const, title: 'Progress', icon: '📈', component: ProgressScreen },
-  { name: 'Profile' as const, title: 'Profile', icon: '👤', component: ProfileScreen },
+  { name: 'Home' as const, title: 'Dashboard', icon: AppIcons.home, iconOutline: AppIcons.homeOutline, component: HomeScreen },
+  { name: 'Programs' as const, title: 'Programs', icon: AppIcons.programs, iconOutline: AppIcons.programsOutline, component: ProgramsScreen },
+  { name: 'History' as const, title: 'History', icon: AppIcons.history, iconOutline: AppIcons.history, component: HistoryScreen },
+  { name: 'Progress' as const, title: 'Progress', icon: AppIcons.progress, iconOutline: AppIcons.progressOutline, component: ProgressScreen },
+  { name: 'Profile' as const, title: 'Profile', icon: AppIcons.profile, iconOutline: AppIcons.profileOutline, component: ProfileScreen },
 ];
 
 // Hamburger Menu Component for narrow screens
 function HamburgerMenu({ navigation, currentRoute }: { navigation: any; currentRoute: string }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
-  
+  const theme = useTheme();
+  const c = theme.colors;
+
   return (
     <>
       {/* Menu Button in bottom bar */}
       <View style={[
-        styles.hamburgerBar, 
-        { paddingBottom: Math.max(insets.bottom, 8) }
+        styles.hamburgerBar,
+        { paddingBottom: Math.max(insets.bottom, 8), backgroundColor: c.surface, borderTopColor: withAlpha(c.outline, 0.3) }
       ]}>
         <TouchableOpacity
           style={styles.hamburgerButton}
           onPress={() => setMenuVisible(true)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel="Open navigation menu"
+          accessibilityRole="button"
         >
-          <Text style={styles.hamburgerIcon}>☰</Text>
-          <Text style={styles.hamburgerLabel}>Menu</Text>
+          <MaterialCommunityIcons name={AppIcons.menu} size={24} color={c.onSurface} style={{ marginRight: 8 }} />
+          <Text style={[styles.hamburgerLabel, { color: c.onSurface }]}>Menu</Text>
         </TouchableOpacity>
-        <Text style={styles.currentScreen}>
-          {TAB_CONFIG.find(t => t.name === currentRoute)?.icon} {TAB_CONFIG.find(t => t.name === currentRoute)?.title}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialCommunityIcons
+            name={TAB_CONFIG.find(t => t.name === currentRoute)?.icon || AppIcons.home}
+            size={18}
+            color={withAlpha(c.onSurface, 0.7)}
+            style={{ marginRight: 6 }}
+          />
+          <Text style={[styles.currentScreen, { color: withAlpha(c.onSurface, 0.7) }]}>
+            {TAB_CONFIG.find(t => t.name === currentRoute)?.title}
+          </Text>
+        </View>
       </View>
 
       {/* Menu Modal */}
@@ -96,37 +107,49 @@ function HamburgerMenu({ navigation, currentRoute }: { navigation: any; currentR
         animationType="slide"
         onRequestClose={() => setMenuVisible(false)}
       >
-        <Pressable 
-          style={styles.menuOverlay} 
+        <Pressable
+          style={[styles.menuOverlay, { backgroundColor: (c as any).scrim || 'rgba(0,0,0,0.5)' }]}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={[styles.menuSheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-            <View style={styles.menuHandle} />
-            <Text style={styles.menuTitle}>Navigation</Text>
-            {TAB_CONFIG.map((tab) => (
-              <TouchableOpacity
-                key={tab.name}
-                style={[
-                  styles.menuItem,
-                  currentRoute === tab.name && styles.menuItemActive
-                ]}
-                onPress={() => {
-                  setMenuVisible(false);
-                  navigation.navigate(tab.name);
-                }}
-              >
-                <Text style={styles.menuItemIcon}>{tab.icon}</Text>
-                <Text style={[
-                  styles.menuItemText,
-                  currentRoute === tab.name && styles.menuItemTextActive
-                ]}>
-                  {tab.title}
-                </Text>
-                {currentRoute === tab.name && (
-                  <Text style={styles.menuItemCheck}>✓</Text>
-                )}
-              </TouchableOpacity>
-            ))}
+          <View style={[styles.menuSheet, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: c.surface }]}>
+            <View style={[styles.menuHandle, { backgroundColor: withAlpha(c.onSurface, 0.3) }]} />
+            <Text style={[styles.menuTitle, { color: c.onSurface }]}>Navigation</Text>
+            {TAB_CONFIG.map((tab) => {
+              const isActive = currentRoute === tab.name;
+              return (
+                <TouchableOpacity
+                  key={tab.name}
+                  style={[
+                    styles.menuItem,
+                    isActive && { backgroundColor: withAlpha(c.primary, 0.15) }
+                  ]}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    navigation.navigate(tab.name);
+                  }}
+                  accessibilityLabel={tab.title}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <MaterialCommunityIcons
+                    name={isActive ? tab.icon : tab.iconOutline}
+                    size={24}
+                    color={isActive ? c.primary : c.onSurface}
+                    style={{ marginRight: spacing.md }}
+                  />
+                  <Text style={[
+                    styles.menuItemText,
+                    { color: isActive ? c.primary : c.onSurface },
+                    isActive && { fontWeight: '600' }
+                  ]}>
+                    {tab.title}
+                  </Text>
+                  {isActive && (
+                    <MaterialCommunityIcons name={AppIcons.check} size={18} color={c.primary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </Pressable>
       </Modal>
@@ -181,8 +204,12 @@ function MainTabs() {
           component={tab.component}
           options={{
             title: tab.title,
-            tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: size, color }}>{tab.icon}</Text>
+            tabBarIcon: ({ color, size, focused }) => (
+              <MaterialCommunityIcons
+                name={focused ? tab.icon : tab.iconOutline}
+                size={size}
+                color={color}
+              />
             ),
           }}
         />
@@ -226,6 +253,13 @@ function RootNavigator() {
         options={{
           title: 'Workout Complete',
           headerBackVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="WorkoutDetail"
+        component={WorkoutDetailScreen}
+        options={{
+          title: 'Workout Details',
         }}
       />
       <Stack.Screen
@@ -303,7 +337,7 @@ function AppContent() {
     return (
       <PaperProvider theme={theme}>
         <View style={styles.errorContainer}>
-          <Text variant="titleMedium" style={{ color: 'red' }}>{error}</Text>
+          <Text variant="titleMedium" style={{ color: theme.colors.error }}>{error}</Text>
         </View>
       </PaperProvider>
     );
@@ -354,94 +388,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Hamburger menu styles for narrow screens
+  // Hamburger menu styles for narrow screens (colors applied inline from theme)
   hamburgerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1B2838',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm + 4,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100, 130, 153, 0.3)',
     zIndex: 1000,
     elevation: 10,
   },
   hamburgerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    padding: spacing.sm,
     minHeight: 44,
     minWidth: 80,
   },
-  hamburgerIcon: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    marginRight: 8,
-  },
   hamburgerLabel: {
     fontSize: 14,
-    color: '#FFFFFF',
     fontWeight: '500',
   },
   currentScreen: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
   },
   menuOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   menuSheet: {
-    backgroundColor: '#1B2838',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingTop: 12,
-    paddingHorizontal: 16,
+    paddingTop: spacing.sm + 4,
+    paddingHorizontal: spacing.md,
   },
   menuHandle: {
     width: 36,
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   menuTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 16,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm + 4,
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     minHeight: 56,
-  },
-  menuItemActive: {
-    backgroundColor: 'rgba(0, 212, 255, 0.15)',
-  },
-  menuItemIcon: {
-    fontSize: 24,
-    marginRight: 16,
   },
   menuItemText: {
     fontSize: 16,
-    color: '#FFFFFF',
     flex: 1,
-  },
-  menuItemTextActive: {
-    color: '#00D4FF',
-    fontWeight: '600',
-  },
-  menuItemCheck: {
-    fontSize: 18,
-    color: '#00D4FF',
   },
 });

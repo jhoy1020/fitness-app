@@ -6,19 +6,23 @@ import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, SegmentedButt
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
 import { useMesoCycle } from '../../context/MesoCycleContext';
+import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { withAlpha } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 // Motivational messages
 const MOTIVATIONAL_MESSAGES = [
-  { emoji: '💪', title: 'Beast Mode Activated!', message: 'You crushed it! Every rep brings you closer to your goals.' },
-  { emoji: '🔥', title: 'On Fire!', message: 'Another workout in the books. Champions are made in the gym!' },
-  { emoji: '🏆', title: 'Winner\'s Mindset!', message: 'Showing up is half the battle. You\'re already ahead of most people!' },
-  { emoji: '⚡', title: 'Powered Up!', message: 'Feel that? That\'s your body getting stronger. Keep it going!' },
-  { emoji: '🚀', title: 'Gains Incoming!', message: 'Your future self is thanking you right now. Great work!' },
-  { emoji: '💎', title: 'Diamond in the Making!', message: 'Pressure creates diamonds. You\'re forging greatness!' },
-  { emoji: '🎯', title: 'Goals Crushed!', message: 'One step closer to the best version of yourself!' },
-  { emoji: '👊', title: 'Unstoppable!', message: 'Nothing can hold you back. You\'re on the path to greatness!' },
-  { emoji: '🌟', title: 'Shining Star!', message: 'Your dedication is inspiring. Keep pushing those limits!' },
-  { emoji: '🦁', title: 'Lion Heart!', message: 'You have the heart of a warrior. Rest up and come back stronger!' },
+  { icon: 'arm-flex' as const, title: 'Beast Mode Activated!', message: 'You crushed it! Every rep brings you closer to your goals.' },
+  { icon: 'fire' as const, title: 'On Fire!', message: 'Another workout in the books. Champions are made in the gym!' },
+  { icon: 'trophy' as const, title: 'Winner\'s Mindset!', message: 'Showing up is half the battle. You\'re already ahead of most people!' },
+  { icon: 'lightning-bolt' as const, title: 'Powered Up!', message: 'Feel that? That\'s your body getting stronger. Keep it going!' },
+  { icon: 'rocket-launch' as const, title: 'Gains Incoming!', message: 'Your future self is thanking you right now. Great work!' },
+  { icon: 'diamond-stone' as const, title: 'Diamond in the Making!', message: 'Pressure creates diamonds. You\'re forging greatness!' },
+  { icon: 'target' as const, title: 'Goals Crushed!', message: 'One step closer to the best version of yourself!' },
+  { icon: 'hand-front-right' as const, title: 'Unstoppable!', message: 'Nothing can hold you back. You\'re on the path to greatness!' },
+  { icon: 'star' as const, title: 'Shining Star!', message: 'Your dedication is inspiring. Keep pushing those limits!' },
+  { icon: 'shield-star' as const, title: 'Lion Heart!', message: 'You have the heart of a warrior. Rest up and come back stronger!' },
 ];
 
 interface WorkoutSummaryScreenProps {
@@ -76,11 +80,17 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
   const [fatigueRating, setFatigueRating] = useState<string>('3');
   const [performanceRating, setPerformanceRating] = useState<string>('3');
 
-  // Calculate stats
+  // Calculate stats (skip duration-based exercises for volume/reps)
   const totalSets = workout.sets.length;
-  const totalVolume = workout.sets.reduce((sum, set) => sum + (set.weight * set.reps), 0);
+  const totalVolume = workout.sets.reduce((sum, set) => {
+    if (set.durationSeconds) return sum; // skip duration sets
+    return sum + (set.weight * set.reps);
+  }, 0);
   const uniqueExercises = [...new Set(workout.sets.map(s => s.exerciseName))];
-  const totalReps = workout.sets.reduce((sum, set) => sum + set.reps, 0);
+  const totalReps = workout.sets.reduce((sum, set) => {
+    if (set.durationSeconds) return sum;
+    return sum + set.reps;
+  }, 0);
 
   // Format duration
   const formatDuration = (seconds: number) => {
@@ -94,10 +104,15 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
   // Group sets by exercise with best e1RM
   const exerciseSummary = uniqueExercises.map(name => {
     const exerciseSets = workout.sets.filter(s => s.exerciseName === name);
-    const best1RM = Math.max(...exerciseSets.map(s => calculate1RM_Epley(s.weight, s.reps)));
+    const libEntry = EXERCISE_LIBRARY.find(e => e.name === name);
+    const trackingType = libEntry?.trackingType || 'weight_reps';
+    const isDuration = trackingType === 'duration' || trackingType === 'weight_duration';
+    
+    const best1RM = isDuration ? 0 : Math.max(...exerciseSets.map(s => calculate1RM_Epley(s.weight, s.reps)));
     const totalSets = exerciseSets.length;
     const maxWeight = Math.max(...exerciseSets.map(s => s.weight));
     const totalReps = exerciseSets.reduce((sum, s) => sum + s.reps, 0);
+    const totalDuration = exerciseSets.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
     
     return {
       name,
@@ -105,6 +120,9 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
       maxWeight,
       totalReps,
       best1RM,
+      totalDuration,
+      trackingType,
+      isDuration,
       muscleGroup: exerciseSets[0]?.muscleGroup || 'other',
     };
   });
@@ -114,7 +132,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.emoji}>💪</Text>
+          <MaterialCommunityIcons name={AppIcons.workout} size={48} color={theme.colors.primary} style={{ marginBottom: 8 }} />
           <Text variant="headlineMedium" style={styles.title}>
             Workout Complete!
           </Text>
@@ -173,9 +191,13 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
                     {exercise.name}
                   </Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    {exercise.totalSets} sets • {exercise.totalReps} reps • Max: {exercise.maxWeight} lbs
+                    {exercise.isDuration
+                      ? `${exercise.totalSets} sets • ${exercise.totalDuration >= 60 ? `${Math.floor(exercise.totalDuration / 60)}m ${exercise.totalDuration % 60}s` : `${exercise.totalDuration}s`} total${exercise.trackingType === 'weight_duration' ? ` • Max: ${exercise.maxWeight} lbs` : ''}`
+                      : `${exercise.totalSets} sets • ${exercise.totalReps} reps • Max: ${exercise.maxWeight} lbs`
+                    }
                   </Text>
                 </View>
+                {!exercise.isDuration && (
                 <View style={styles.e1rmBox}>
                   <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
                     {exercise.best1RM}
@@ -184,6 +206,15 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
                     e1RM
                   </Text>
                 </View>
+                )}
+                {exercise.isDuration && (
+                <View style={styles.e1rmBox}>
+                  <MaterialCommunityIcons name={AppIcons.timer} size={20} color={theme.colors.secondary} />
+                  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    timed
+                  </Text>
+                </View>
+                )}
               </View>
             </View>
           ))}
@@ -192,7 +223,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
         {/* Motivational message */}
         <Surface style={[styles.card, { backgroundColor: theme.colors.primaryContainer }]} elevation={0}>
           <Text variant="bodyLarge" style={{ color: theme.colors.onPrimaryContainer, textAlign: 'center' }}>
-            🔥 Great job! Every workout brings you closer to your goals.
+            Great job! Every workout brings you closer to your goals.
           </Text>
         </Surface>
 
@@ -201,14 +232,14 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
           <TouchableOpacity onPress={() => setShowFeedback(true)}>
             <Surface style={[styles.card, { borderWidth: 2, borderColor: theme.colors.primary }]} elevation={1}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Text style={{ fontSize: 32 }}>📝</Text>
+                <MaterialCommunityIcons name={AppIcons.notes} size={32} color={theme.colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text variant="titleMedium">Rate This Workout</Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                     Help optimize your training volume
                   </Text>
                 </View>
-                <Text style={{ fontSize: 20 }}>›</Text>
+                <MaterialCommunityIcons name={AppIcons.chevronRight} size={20} color={theme.colors.onSurfaceVariant} />
               </View>
             </Surface>
           </TouchableOpacity>
@@ -224,7 +255,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
               {/* Pump Rating */}
               <View style={styles.feedbackSection}>
                 <Text variant="labelLarge" style={styles.feedbackLabel}>
-                  💪 Pump Quality
+                  Pump Quality
                 </Text>
                 <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
                   How good was your muscle pump?
@@ -245,7 +276,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
               {/* Performance Rating */}
               <View style={styles.feedbackSection}>
                 <Text variant="labelLarge" style={styles.feedbackLabel}>
-                  📈 Performance
+                  Performance
                 </Text>
                 <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
                   Did you hit your targets / make progress?
@@ -266,7 +297,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
               {/* Fatigue Rating */}
               <View style={styles.feedbackSection}>
                 <Text variant="labelLarge" style={styles.feedbackLabel}>
-                  😴 Current Fatigue
+                  Current Fatigue
                 </Text>
                 <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
                   How tired do you feel right now?
@@ -287,7 +318,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
               {/* Soreness Prediction */}
               <View style={styles.feedbackSection}>
                 <Text variant="labelLarge" style={styles.feedbackLabel}>
-                  🔥 Expected Soreness
+                  Expected Soreness
                 </Text>
                 <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
                   How sore do you expect to be tomorrow?
@@ -351,9 +382,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
         >
           <View style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16 }}>
             <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-              <Text style={{ fontSize: 80, textAlign: 'center', marginBottom: 16 }}>
-                {motivation.emoji}
-              </Text>
+              <MaterialCommunityIcons name={motivation.icon} size={80} color={theme.colors.primary} style={{ textAlign: 'center', marginBottom: 16 }} />
             </Animated.View>
             <Text 
               variant="headlineMedium" 
@@ -404,7 +433,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
               onPress={() => setShowMotivation(false)}
               style={{ paddingHorizontal: 32 }}
             >
-              Let's Go! 🚀
+              Let's Go!
             </Button>
           </Dialog.Actions>
         </Dialog>

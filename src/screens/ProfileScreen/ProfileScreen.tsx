@@ -9,6 +9,9 @@ import { ProgressBar, InfoTooltip, ABBREVIATIONS } from '../../components';
 import { soundService } from '../../services/SoundService/SoundService';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { withAlpha } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 import type { ActivityLevel, GoalType, OneRepMaxRecord } from '../../types';
 
 interface ProfileScreenProps {
@@ -148,8 +151,8 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       {/* Profile Header with Stats */}
       <Surface style={styles.card} elevation={1}>
         <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>{name ? name.charAt(0).toUpperCase() : '👤'}</Text>
+          <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary }]}>
+            <Text style={[styles.avatarText, { color: theme.colors.onPrimary }]}>{name ? name.charAt(0).toUpperCase() : <MaterialCommunityIcons name={AppIcons.profile} size={28} color={theme.colors.onPrimary} />}</Text>
           </View>
           <View style={styles.profileInfo}>
             <TextInput
@@ -164,13 +167,13 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         </View>
         
         {/* Quick Stats Row */}
-        <View style={styles.quickStats}>
+        <View style={[styles.quickStats, { borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
           <View style={styles.quickStatItem}>
             <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>{workoutStats.totalWorkouts}</Text>
             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Workouts</Text>
           </View>
           <View style={styles.quickStatItem}>
-            <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>{workoutStats.streak}🔥</Text>
+            <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>{workoutStats.streak}<MaterialCommunityIcons name={AppIcons.warmup} size={20} color={theme.colors.primary} /></Text>
             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Day Streak</Text>
           </View>
           <View style={styles.quickStatItem}>
@@ -212,7 +215,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text variant="bodyLarge">{isDark ? '🌙' : '☀️'} Theme</Text>
+            <Text variant="bodyLarge"><MaterialCommunityIcons name={isDark ? 'weather-night' : 'white-balance-sunny'} size={20} color={theme.colors.onSurface} /> Theme</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
               {isDark ? 'Dark mode' : 'Light mode'}
             </Text>
@@ -224,7 +227,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
         
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text variant="bodyLarge">🔊 Sound Effects</Text>
+            <Text variant="bodyLarge">Sound Effects</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
               Timer alerts & feedback sounds
             </Text>
@@ -244,7 +247,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
       <Surface style={styles.card} elevation={1}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text variant="titleMedium">🏋️ 1RM Records</Text>
+            <Text variant="titleMedium">1RM Records</Text>
             <InfoTooltip {...ABBREVIATIONS['1RM']} />
           </View>
           <Button mode="contained-tonal" compact onPress={() => {
@@ -282,7 +285,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 <View style={{ flex: 1 }}>
                   <Text variant="titleSmall">{record.exerciseName}</Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                    {record.method === 'tested' ? '✓ Tested' : '📊 Calculated'} • {new Date(record.testedDate).toLocaleDateString()}
+                    {record.method === 'tested' ? '✓ Tested' : 'Calculated'} • {new Date(record.testedDate).toLocaleDateString()}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -294,7 +297,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                   onPress={() => setDeleteConfirmRecord(record.id)}
                   style={{ marginLeft: 12, padding: 4 }}
                 >
-                  <Text style={{ color: theme.colors.error }}>✕</Text>
+                  <MaterialCommunityIcons name={AppIcons.close} size={20} color={theme.colors.error} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -413,9 +416,9 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           value={goalType}
           onValueChange={(v) => setGoalType(v as GoalType)}
           buttons={[
-            { value: 'cut', label: '🔻 Cut' },
-            { value: 'maintain', label: '⚖️ Maintain' },
-            { value: 'bulk', label: '🔺 Bulk' },
+            { value: 'cut', label: 'Cut' },
+            { value: 'maintain', label: 'Maintain' },
+            { value: 'bulk', label: 'Bulk' },
           ]}
           style={styles.segmented}
         />
@@ -568,7 +571,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
               onValueChange={(v) => setOrm1RMMethod(v as 'tested' | 'calculated')}
               buttons={[
                 { value: 'tested', label: '✓ Tested 1RM' },
-                { value: 'calculated', label: '📊 Calculate' },
+                { value: 'calculated', label: 'Calculate' },
               ]}
               style={{ marginBottom: 12 }}
             />
@@ -687,14 +690,14 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#00D4FF',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   avatarText: {
     fontSize: 28,
-    color: '#0D1B2A',
+    color: 'transparent',
     fontWeight: 'bold',
   },
   profileInfo: {
@@ -709,7 +712,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100,130,153,0.2)',
+    borderTopColor: 'transparent',
   },
   quickStatItem: {
     alignItems: 'center',

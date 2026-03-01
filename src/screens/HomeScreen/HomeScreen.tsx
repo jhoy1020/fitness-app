@@ -5,14 +5,18 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, TextInput, ProgressBar, IconButton } from 'react-native-paper';
 import { TouchableOpacity } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useWorkout, useUser, useMesoCycle } from '../../context';
-import { WorkoutCard } from '../../components';
+import { WorkoutCard, ProgramCard, PausedWorkoutCard } from '../../components';
 import { getAllExercises, getSetsByWorkoutId } from '../../services/db';
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
 import { TRAINING_PROGRAMS } from '../../data/programs/programs';
 import { getRecoverySuggestions } from '../../utils/recoveryEngine/recoveryEngine';
 import { RECOVERY_LIBRARY, RecoveryTemplate } from '../../data/activities/activities';
+import { DeloadBanner } from '../../components/DeloadBanner';
+import { withAlpha, statusColors, spacing as sp } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 import type { Exercise, WorkoutSet, Workout, MuscleGroup, RecoverySuggestion, CardioType } from '../../types';
 
 interface EditableSet {
@@ -44,7 +48,7 @@ interface HomeScreenProps {
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
   const theme = useTheme();
-  const { state: workoutState, dispatch: workoutDispatch, repeatWorkout } = useWorkout();
+  const { state: workoutState, dispatch: workoutDispatch, repeatWorkout, clearPausedWorkout } = useWorkout();
   const { state: userState } = useUser();
   const { state: mesoState, dispatch: mesoDispatch, shouldTriggerDeload } = useMesoCycle();
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -88,6 +92,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [cardioCalories, setCardioCalories] = useState('');
   const [cardioNotes, setCardioNotes] = useState('');
   const [cardioAvgHR, setCardioAvgHR] = useState('');
+  
+  // Stop program confirmation
+  const [showStopProgramDialog, setShowStopProgramDialog] = useState(false);
   
   // Rest/Cardio/Recovery day dialogs
   const [showRestDayDialog, setShowRestDayDialog] = useState(false);
@@ -632,25 +639,25 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       recommendation = {
         type: 'rest',
         message: `${consecutiveWorkoutDays} workout days in a row! Consider a rest day for recovery.`,
-        icon: '😴'
+        icon: 'power-sleep'
       };
     } else if (workoutDays >= 6 && restDays === 0) {
       recommendation = {
         type: 'rest',
         message: 'Heavy week! Your muscles need recovery time.',
-        icon: '⚠️'
+        icon: 'alert'
       };
     } else if (restDays >= 3 && workoutDays <= 2) {
       recommendation = {
         type: 'workout',
         message: 'Well rested! Ready to hit the weights.',
-        icon: '🔥'
+        icon: 'fire'
       };
     } else if (consecutiveWorkoutDays >= 2 && recoveryDays === 0) {
       recommendation = {
         type: 'recovery',
         message: 'Active recovery could help with muscle soreness.',
-        icon: '🧘'
+        icon: 'yoga'
       };
     }
     
@@ -743,21 +750,21 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         {/* Quick Stats Row */}
         <View style={styles.topStatsRow}>
           <Surface style={styles.streakCard} elevation={2}>
-            <Text style={{ fontSize: 28 }}>🔥</Text>
+            <MaterialCommunityIcons name={AppIcons.warmup} size={28} color={theme.colors.primary} />
             <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
               {activityStats.workoutDays}
             </Text>
             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Workouts</Text>
           </Surface>
           <Surface style={styles.streakCard} elevation={2}>
-            <Text style={{ fontSize: 28 }}>😴</Text>
+            <MaterialCommunityIcons name={AppIcons.rest} size={28} color={theme.colors.secondary} />
             <Text variant="headlineSmall" style={{ color: theme.colors.secondary }}>
               {activityStats.restDays}
             </Text>
             <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Rest Days</Text>
           </Surface>
           <Surface style={styles.streakCard} elevation={2}>
-            <Text style={{ fontSize: 28 }}>🧘</Text>
+            <MaterialCommunityIcons name={AppIcons.recovery} size={28} color={theme.colors.tertiary} />
             <Text variant="headlineSmall" style={{ color: theme.colors.tertiary }}>
               {activityStats.recoveryDays}
             </Text>
@@ -783,10 +790,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               const getDayIcon = () => {
                 if (!day.hasActivity) return null;
                 switch (day.dayType) {
-                  case 'rest': return '😴';
-                  case 'active_recovery': return '🧘';
-                  case 'cardio': return '🏃';
-                  default: return '🔥';
+                  case 'rest': return AppIcons.rest;
+                  case 'active_recovery': return AppIcons.recovery;
+                  case 'cardio': return AppIcons.cardio;
+                  default: return AppIcons.warmup;
                 }
               };
               
@@ -802,7 +809,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                     day.isFuture && { opacity: 0.3 },
                   ]}>
                     {day.hasActivity ? (
-                      <Text style={{ fontSize: 12 }}>{getDayIcon()}</Text>
+                      <MaterialCommunityIcons name={getDayIcon()!} size={14} color={theme.colors.onSurface} />
                     ) : (
                       <Text variant="labelSmall" style={{ color: day.isToday ? theme.colors.primary : theme.colors.outline }}>
                         {day.date}
@@ -832,15 +839,15 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               borderBottomLeftRadius: 12,
               borderBottomRightRadius: 12,
             }}>
-              <Text style={{ fontSize: 20, marginRight: 8 }}>{activityStats.recommendation.icon}</Text>
+              <MaterialCommunityIcons name={activityStats.recommendation.icon as any} size={20} color={theme.colors.onSurface} style={{ marginRight: 8 }} />
               <Text variant="bodySmall" style={{ flex: 1 }}>
                 {activityStats.recommendation.message}
               </Text>
             </View>
           )}
           
-          {/* Action Buttons Row */}
-          {!activityStats.recommendation && (
+          {/* Action Buttons Row - hidden when program is active (ProgramCard handles it) */}
+          {!activityStats.recommendation && !mesoState.activeMesoCycle && (
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
               <Button
               mode="contained"
@@ -858,9 +865,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 setShowRestDayDialog(true);
               }}
               style={{ flex: 1 }}
+              icon={AppIcons.rest}
               compact
             >
-              😴 Rest
+              Rest
             </Button>
             <Button
               mode="outlined"
@@ -899,15 +907,16 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 setShowRecoveryDialog(true);
               }}
               style={{ flex: 1 }}
+              icon={AppIcons.recovery}
               compact
             >
-              🧘 Recovery
+              Recovery
             </Button>
           </View>
           )}
           
-          {/* Action Buttons Row - when recommendation is shown */}
-          {activityStats.recommendation && (
+          {/* Action Buttons Row - when recommendation is shown, hidden when program active */}
+          {activityStats.recommendation && !mesoState.activeMesoCycle && (
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
               <Button
                 mode="contained"
@@ -925,9 +934,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   setShowRestDayDialog(true);
                 }}
                 style={{ flex: 1 }}
+                icon={AppIcons.rest}
                 compact
               >
-                😴 Rest
+                Rest
               </Button>
               <Button
                 mode="outlined"
@@ -966,9 +976,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                   setShowRecoveryDialog(true);
                 }}
                 style={{ flex: 1 }}
+                icon={AppIcons.recovery}
                 compact
               >
-                🧘 Recovery
+                Recovery
               </Button>
             </View>
           )}
@@ -986,84 +997,35 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           )}
         </Surface>
 
-        {/* Active Mesocycle - Compact Card */}
+        {/* Active Program Card */}
         {mesoState.activeMesoCycle && (
-          <Surface style={styles.mesoCard} elevation={2}>
-            <View style={styles.mesoHeader}>
-              <View style={{ flex: 1 }}>
-                <Text variant="titleMedium">{mesoState.activeMesoCycle.name}</Text>
-                <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                  Week {mesoState.activeMesoCycle.currentWeek} of {mesoState.activeMesoCycle.totalWeeks}
-                  {getNextProgramWorkout && ` • Day ${getNextProgramWorkout.dayNumber}/${getNextProgramWorkout.totalDays}`}
-                </Text>
-                {getNextProgramWorkout && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                    <Text style={{ marginRight: 6 }}>
-                      {getNextProgramWorkout.dayType === 'rest' ? '😴' : 
-                       getNextProgramWorkout.dayType === 'cardio' ? '🏃' :
-                       getNextProgramWorkout.dayType === 'active_recovery' ? '🧘' : '💪'}
-                    </Text>
-                    <Text variant="labelMedium" style={{ 
-                      color: getNextProgramWorkout.dayType === 'rest' ? theme.colors.outline :
-                             getNextProgramWorkout.dayType === 'cardio' ? theme.colors.secondary :
-                             getNextProgramWorkout.dayType === 'active_recovery' ? theme.colors.tertiary :
-                             theme.colors.primary
-                    }}>
-                      {getNextProgramWorkout.name}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Button
-                mode="contained"
-                onPress={handleStartProgramWorkout}
-                compact
-                buttonColor={
-                  getNextProgramWorkout?.dayType === 'rest' ? theme.colors.surfaceVariant :
-                  getNextProgramWorkout?.dayType === 'cardio' ? theme.colors.secondary :
-                  getNextProgramWorkout?.dayType === 'active_recovery' ? theme.colors.tertiary :
-                  theme.colors.primary
-                }
-              >
-                {getNextProgramWorkout?.dayType === 'rest' ? '😴 Rest Day' :
-                 getNextProgramWorkout?.dayType === 'cardio' ? '🏃 Cardio' :
-                 getNextProgramWorkout?.dayType === 'active_recovery' ? '🧘 Recovery' :
-                 getNextProgramWorkout ? 'Start Workout' : 'Start Workout'}
-              </Button>
-            </View>
-            <ProgressBar 
-              progress={mesoState.activeMesoCycle.currentWeek / mesoState.activeMesoCycle.totalWeeks} 
-              color={theme.colors.primary}
-              style={{ marginTop: 12, borderRadius: 4 }}
-            />
-            
-            {/* Workout Progress */}
-            <View style={styles.workoutProgress}>
-              <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
-                Workouts: {mesoState.activeMesoCycle.completedWorkouts || 0} / {mesoState.activeMesoCycle.totalWorkouts}
-              </Text>
-              <ProgressBar 
-                progress={(mesoState.activeMesoCycle.completedWorkouts || 0) / mesoState.activeMesoCycle.totalWorkouts}
-                color={theme.colors.secondary}
-                style={{ marginTop: 4, borderRadius: 2, height: 4 }}
-              />
-            </View>
-            
-            {/* Deload indicator */}
-            {mesoState.activeMesoCycle.weeks[mesoState.activeMesoCycle.currentWeek - 1]?.isDeload && (
-              <Surface style={[styles.deloadBadge, { backgroundColor: 'rgba(255,193,7,0.2)' }]} elevation={0}>
-                <Text style={{ fontSize: 14 }}>😌</Text>
-                <Text variant="labelMedium" style={{ color: '#FFC107', marginLeft: 8 }}>
-                  Deload Week - Reduced Volume
-                </Text>
-              </Surface>
-            )}
-          </Surface>
+          <ProgramCard
+            activeMesoCycle={mesoState.activeMesoCycle}
+            nextWorkout={getNextProgramWorkout}
+            pausedWorkout={workoutState.pausedWorkout?.isProgramWorkout ? workoutState.pausedWorkout : null}
+            theme={theme}
+            onStartWorkout={handleStartProgramWorkout}
+            onResumeWorkout={() => navigation.navigate('ActiveWorkout', { resuming: true })}
+            onDiscardPausedWorkout={clearPausedWorkout}
+            onStopProgram={() => setShowStopProgramDialog(true)}
+          />
         )}
 
-        {/* Debug Panel for Testing - Separate Card */}
-        {mesoState.activeMesoCycle && (
-          <Surface style={styles.debugCard} elevation={1}>
+        {/* Paused Standalone Workout Card */}
+        {workoutState.pausedWorkout && !workoutState.pausedWorkout.isProgramWorkout && (
+          <PausedWorkoutCard
+            workoutName={workoutState.pausedWorkout.workoutName}
+            exerciseCount={workoutState.pausedWorkout.exercises.length}
+            pausedAt={workoutState.pausedWorkout.pausedAt}
+            theme={theme}
+            onResume={() => navigation.navigate('ActiveWorkout', { resuming: true })}
+            onDiscard={clearPausedWorkout}
+          />
+        )}
+
+        {/* Debug Panel for Testing - Dev Only */}
+        {__DEV__ && mesoState.activeMesoCycle && (
+          <Surface style={[styles.debugCard, { borderColor: withAlpha((theme.colors as any).warning, 0.4), backgroundColor: withAlpha((theme.colors as any).warning, 0.05) }]} elevation={1}>
             <Text variant="titleSmall" style={{ marginBottom: 8 }}>🧪 Test Workout Progression</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12 }}>
               Week {mesoState.activeMesoCycle.currentWeek}/{mesoState.activeMesoCycle.totalWeeks} • Day {getNextProgramWorkout?.dayNumber || '?'}/{getNextProgramWorkout?.totalDays || '?'} - {getNextProgramWorkout?.name || 'N/A'}
@@ -1124,7 +1086,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         {/* Fatigue & Volume Indicators (when program active) */}
         {mesoState.activeMesoCycle && Object.values(mesoState.muscleFatigue).some(f => f.currentFatigue > 30) && (
           <Surface style={styles.fatigueCard} elevation={1}>
-            <Text variant="titleMedium" style={{ marginBottom: 8 }}>🔋 Muscle Recovery</Text>
+            <Text variant="titleMedium" style={{ marginBottom: 8 }}>
+              <MaterialCommunityIcons name="battery-charging" size={18} color={theme.colors.onSurface} />{' '}Muscle Recovery
+            </Text>
             <View style={styles.fatigueGrid}>
               {Object.entries(mesoState.muscleFatigue)
                 .filter(([_, f]) => f.currentFatigue > 30)
@@ -1136,16 +1100,16 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                       <Text variant="labelSmall" style={{ textTransform: 'capitalize' }}>{muscle}</Text>
                       <Text variant="labelSmall" style={{ 
                         color: fatigue.currentFatigue > 70 ? theme.colors.error : 
-                               fatigue.currentFatigue > 50 ? '#FFC107' : theme.colors.outline 
+                               fatigue.currentFatigue > 50 ? (theme.colors as any).warning : theme.colors.outline 
                       }}>
-                        {fatigue.currentFatigue > 70 ? '⚠️ High' : 
-                         fatigue.currentFatigue > 50 ? '🔶 Mod' : '🟢 OK'}
+                        {fatigue.currentFatigue > 70 ? 'High' : 
+                         fatigue.currentFatigue > 50 ? 'Mod' : 'OK'}
                       </Text>
                     </View>
                     <ProgressBar 
                       progress={fatigue.currentFatigue / 100}
                       color={fatigue.currentFatigue > 70 ? theme.colors.error : 
-                             fatigue.currentFatigue > 50 ? '#FFC107' : theme.colors.primary}
+                             fatigue.currentFatigue > 50 ? (theme.colors as any).warning : theme.colors.primary}
                       style={{ height: 4, borderRadius: 2 }}
                     />
                   </View>
@@ -1164,12 +1128,17 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           </Surface>
         )}
 
+        {/* Deload Recommendation Banner */}
+        <DeloadBanner />
+
         {/* Quick Start Templates - Always show */}
         <Surface style={styles.quickTemplates} elevation={1}>
-          <Text variant="titleMedium" style={{ marginBottom: 12 }}>⚡ Quick Start</Text>
+          <Text variant="titleMedium" style={{ marginBottom: 12 }}>
+            <MaterialCommunityIcons name="lightning-bolt" size={18} color={theme.colors.onSurface} />{' '}Quick Start
+          </Text>
           <View style={styles.templateRow}>
             <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: 'rgba(0,212,255,0.15)' }]}
+              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.primary, 0.15) }]}
               onPress={() => navigation.navigate('ActiveWorkout', { 
                 templateWorkout: { name: 'Push Day', sets: [
                   { exerciseName: 'Bench Press', muscleGroup: 'chest' },
@@ -1179,11 +1148,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 ]}
               })}
             >
-              <Text style={{ fontSize: 16 }}>🏋️</Text>
+              <MaterialCommunityIcons name={AppIcons.workout} size={18} color={theme.colors.primary} />
               <Text variant="labelMedium" style={{ color: theme.colors.primary }}>Push</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: 'rgba(255,107,107,0.15)' }]}
+              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.error, 0.15) }]}
               onPress={() => navigation.navigate('ActiveWorkout', { 
                 templateWorkout: { name: 'Pull Day', sets: [
                   { exerciseName: 'Barbell Row', muscleGroup: 'back' },
@@ -1193,11 +1162,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 ]}
               })}
             >
-              <Text style={{ fontSize: 16 }}>💪</Text>
-              <Text variant="labelMedium" style={{ color: '#FF6B6B' }}>Pull</Text>
+              <MaterialCommunityIcons name={AppIcons.muscle} size={18} color={theme.colors.error} />
+              <Text variant="labelMedium" style={{ color: theme.colors.error }}>Pull</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: 'rgba(78,205,196,0.15)' }]}
+              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.tertiary, 0.15) }]}
               onPress={() => navigation.navigate('ActiveWorkout', { 
                 templateWorkout: { name: 'Legs Day', sets: [
                   { exerciseName: 'Squat', muscleGroup: 'quads' },
@@ -1207,15 +1176,15 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 ]}
               })}
             >
-              <Text style={{ fontSize: 16 }}>🦵</Text>
-              <Text variant="labelMedium" style={{ color: '#4ECDC4' }}>Legs</Text>
+              <MaterialCommunityIcons name={AppIcons.target} size={18} color={theme.colors.tertiary} />
+              <Text variant="labelMedium" style={{ color: theme.colors.tertiary }}>Legs</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: 'rgba(153,102,255,0.15)' }]}
+              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.outline, 0.15) }]}
               onPress={() => navigation.navigate('ActiveWorkout')}
             >
-              <Text style={{ fontSize: 16 }}>✏️</Text>
-              <Text variant="labelMedium" style={{ color: '#9966FF' }}>Custom</Text>
+              <MaterialCommunityIcons name={AppIcons.edit} size={18} color={theme.colors.outline} />
+              <Text variant="labelMedium" style={{ color: theme.colors.outline }}>Custom</Text>
             </TouchableOpacity>
           </View>
         </Surface>
@@ -1224,7 +1193,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         {mesoState.mesoCycleHistory.filter(m => m.status === 'completed').length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text variant="titleMedium">🏆 Completed Programs</Text>
+              <Text variant="titleMedium">
+                <MaterialCommunityIcons name={AppIcons.pr} size={18} color={theme.colors.onSurface} />{' '}Completed Programs
+              </Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
               <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -1305,7 +1276,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         {/* Weekly Volume Summary - Only if has data */}
         {weeklyVolume.length > 0 && (
           <Surface style={styles.volumeCard} elevation={1}>
-            <Text variant="titleMedium" style={{ marginBottom: 12 }}>📊 This Week's Volume</Text>
+            <Text variant="titleMedium" style={{ marginBottom: 12 }}>
+              <MaterialCommunityIcons name="chart-bar" size={18} color={theme.colors.onSurface} />{' '}This Week's Volume
+            </Text>
             <View style={styles.volumeGrid}>
               {weeklyVolume.map(({ muscle, sets }) => (
                 <View key={muscle} style={styles.volumeItem}>
@@ -1323,11 +1296,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         {recentPRs.length > 0 && (
           <Surface style={styles.prCard} elevation={1}>
             <View style={styles.prHeader}>
-              <Text style={{ fontSize: 20 }}>🏆</Text>
+              <MaterialCommunityIcons name={AppIcons.pr} size={22} color={statusColors.pr} />
               <Text variant="titleMedium" style={{ marginLeft: 8 }}>Recent PRs</Text>
             </View>
             {recentPRs.slice(0, 3).map((pr, index) => (
-              <View key={index} style={styles.prItem}>
+              <View key={index} style={[styles.prItem, { borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
                 <Text variant="bodyMedium" style={{ flex: 1 }} numberOfLines={1}>
                   {pr.exercise}
                 </Text>
@@ -1339,6 +1312,35 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           </Surface>
         )}
       </ScrollView>
+
+      {/* Stop Program Confirmation Dialog */}
+      <Portal>
+        <Dialog visible={showStopProgramDialog} onDismiss={() => setShowStopProgramDialog(false)}>
+          <Dialog.Title>Stop Program?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to stop "{mesoState.activeMesoCycle?.name}"?
+            </Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.outline, marginTop: 8 }}>
+              You're on Week {mesoState.activeMesoCycle?.currentWeek} of {mesoState.activeMesoCycle?.totalWeeks} with {mesoState.activeMesoCycle?.completedWorkouts || 0} workouts completed. This cannot be undone.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowStopProgramDialog(false)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => {
+                if (mesoState.activeMesoCycle) {
+                  mesoDispatch({ type: 'ABANDON_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
+                }
+                setShowStopProgramDialog(false);
+              }}
+            >
+              Stop Program
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
       {/* Edit Dialog */}
       <Portal>
@@ -1401,7 +1403,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               
               {/* Add New Set */}
               {showAddSet ? (
-                <View style={styles.addSetForm}>
+                <View style={[styles.addSetForm, { backgroundColor: withAlpha(theme.colors.primary, 0.05) }]}>
                   <View style={{ position: 'relative', zIndex: 1 }}>
                     <TextInput
                       label="Exercise"
@@ -1423,7 +1425,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                           {filteredExercises.map((ex) => (
                             <TouchableOpacity
                               key={ex.name}
-                              style={styles.exerciseOption}
+                              style={[styles.exerciseOption, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}
                               onPress={() => {
                                 setNewSetExercise(ex.name);
                                 setExerciseSearch('');
@@ -1550,7 +1552,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               
               {/* Add Set Form */}
               {addingSetToNew ? (
-                <View style={styles.addSetForm}>
+                <View style={[styles.addSetForm, { backgroundColor: withAlpha(theme.colors.primary, 0.05) }]}>
                   <View style={{ position: 'relative', zIndex: 1 }}>
                     <TextInput
                       label="Exercise Name"
@@ -1572,7 +1574,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                           {filteredNewWkExercises.map((ex) => (
                             <TouchableOpacity
                               key={ex.name}
-                              style={styles.exerciseOption}
+                              style={[styles.exerciseOption, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}
                               onPress={() => {
                                 setNewWkSetExercise(ex.name);
                                 setNewWkExerciseSearch('');
@@ -1805,7 +1807,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       {/* Program Completion Modal */}
       <Portal>
         <Dialog visible={showProgramComplete} onDismiss={() => setShowProgramComplete(false)}>
-          <Dialog.Title style={{ textAlign: 'center' }}>🎉 Program Complete!</Dialog.Title>
+          <Dialog.Title style={{ textAlign: 'center' }}>Program Complete!</Dialog.Title>
           <Dialog.Content>
             {completedProgramStats && (
               <View style={{ alignItems: 'center' }}>
@@ -1814,7 +1816,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 </Text>
                 
                 <Surface style={{ padding: 16, borderRadius: 12, width: '100%', marginBottom: 16 }} elevation={1}>
-                  <Text variant="titleMedium" style={{ marginBottom: 12, textAlign: 'center' }}>📊 Your Progress</Text>
+                  <Text variant="titleMedium" style={{ marginBottom: 12, textAlign: 'center' }}>Your Progress</Text>
                   
                   <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 }}>
                     <View style={{ alignItems: 'center' }}>
@@ -1940,7 +1942,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       {/* Rest Day Dialog */}
       <Portal>
         <Dialog visible={showRestDayDialog} onDismiss={() => setShowRestDayDialog(false)}>
-          <Dialog.Title>😴 Rest Day</Dialog.Title>
+          <Dialog.Title>Rest Day</Dialog.Title>
           <Dialog.Content>
             <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
               Today is a scheduled rest day: <Text style={{ fontWeight: 'bold' }}>{restDayInfo?.name}</Text>
@@ -1951,7 +1953,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               </Text>
             )}
             <Surface style={{ padding: 12, borderRadius: 8, backgroundColor: theme.colors.surfaceVariant }} elevation={0}>
-              <Text variant="labelMedium" style={{ marginBottom: 8 }}>💡 Rest Day Tips:</Text>
+              <Text variant="labelMedium" style={{ marginBottom: 8 }}>Rest Day Tips:</Text>
               <Text variant="bodySmall">• Get 7-9 hours of sleep</Text>
               <Text variant="bodySmall">• Eat enough protein (1g per lb bodyweight)</Text>
               <Text variant="bodySmall">• Stay hydrated</Text>
@@ -1989,7 +1991,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       {/* Cardio Day Dialog */}
       <Portal>
         <Dialog visible={showCardioDialog} onDismiss={() => setShowCardioDialog(false)}>
-          <Dialog.Title>🏃 Cardio Day</Dialog.Title>
+          <Dialog.Title>Cardio Day</Dialog.Title>
           <Dialog.Content>
             <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
               Today is: <Text style={{ fontWeight: 'bold' }}>{cardioInfo?.name}</Text>
@@ -2045,7 +2047,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       {/* Active Recovery Day Dialog */}
       <Portal>
         <Dialog visible={showRecoveryDialog} onDismiss={() => setShowRecoveryDialog(false)} style={{ maxHeight: '85%' }}>
-          <Dialog.Title>🧘 Active Recovery</Dialog.Title>
+          <Dialog.Title>Active Recovery</Dialog.Title>
           <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
             <ScrollView style={{ paddingHorizontal: 24 }}>
               <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 16 }}>
@@ -2056,7 +2058,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               {recoveryInfo?.smartSuggestions?.length > 0 && (
                 <>
                   <Text variant="titleSmall" style={{ marginBottom: 8, color: theme.colors.primary }}>
-                    ✨ Recommended for You
+                    Recommended for You
                   </Text>
                   {recoveryInfo.trainedMuscles?.length > 0 && (
                     <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12, fontStyle: 'italic' }}>
@@ -2260,10 +2262,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dayCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(100,130,153,0.15)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2289,7 +2291,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100,130,153,0.2)',
+    borderTopColor: 'transparent',  // set inline from theme
   },
   deloadBadge: {
     flexDirection: 'row',
@@ -2328,7 +2330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100,130,153,0.2)',
+    borderTopColor: 'transparent',  // set inline from theme
   },
   volumeCard: {
     padding: 16,
@@ -2387,15 +2389,15 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
+    overflow: 'visible' as const,
   },
   debugCard: {
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,193,7,0.4)',
-    backgroundColor: 'rgba(255,193,7,0.05)',
+    borderColor: 'transparent',  // set inline from theme
+    backgroundColor: 'transparent',  // set inline from theme
   },
   mesoHeader: {
     flexDirection: 'row',
@@ -2434,7 +2436,7 @@ const styles = StyleSheet.create({
   addSetForm: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: 'rgba(0,212,255,0.05)',
+    backgroundColor: 'transparent',  // set inline from theme
     borderRadius: 8,
   },
   exerciseDropdown: {
@@ -2447,7 +2449,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.2)',
+    borderBottomColor: 'transparent',  // set inline from theme
   },
 });
 

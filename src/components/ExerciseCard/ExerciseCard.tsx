@@ -6,6 +6,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, Chip, IconButton, useTheme } from 'react-native-paper';
 import type { Exercise } from '../../types';
 import { MUSCLE_GROUP_LABELS, EQUIPMENT_LABELS } from '../../utils/constants/constants';
+import { muscleGroupColors } from '../../theme';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -35,21 +36,7 @@ export function ExerciseCard({
   const theme = useTheme();
 
   const getMuscleGroupColor = (muscleGroup: string): string => {
-    const colors: Record<string, string> = {
-      chest: '#E91E63',
-      back: '#2196F3',
-      shoulders: '#9C27B0',
-      biceps: '#FF5722',
-      triceps: '#FF9800',
-      forearms: '#795548',
-      quadriceps: '#4CAF50',
-      hamstrings: '#8BC34A',
-      glutes: '#CDDC39',
-      calves: '#009688',
-      core: '#00BCD4',
-      full_body: '#607D8B',
-    };
-    return colors[muscleGroup] || theme.colors.primary;
+    return muscleGroupColors[muscleGroup] || theme.colors.primary;
   };
 
   return (

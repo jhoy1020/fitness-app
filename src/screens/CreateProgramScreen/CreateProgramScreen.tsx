@@ -20,6 +20,9 @@ import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
 import type { MuscleGroup, ProgramDayTemplate, ProgramExerciseTemplate, TrainingProgram, DayType, CardioFinisher, RecoverySuggestion } from '../../types';
 import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import { CARDIO_FINISHERS, RECOVERY_LIBRARY } from '../../data/activities/activities';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { withAlpha } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 interface CreateProgramScreenProps {
   navigation: any;
@@ -424,14 +427,16 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
 
           {workoutDays.length === 0 ? (
             <View style={styles.emptyDays}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>📅</Text>
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>
+                <MaterialCommunityIcons name={AppIcons.calendar} size={32} color={theme.colors.outline} />
+              </Text>
               <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>
                 No workout days yet. Add your first day!
               </Text>
             </View>
           ) : (
             workoutDays.map((day, dayIndex) => (
-              <Surface key={day.id} style={[styles.dayCard, {
+              <Surface key={day.id} style={[styles.dayCard, { backgroundColor: withAlpha(theme.colors.primary, 0.05),
                 borderLeftWidth: 4,
                 borderLeftColor: day.dayType === 'rest' ? theme.colors.surfaceVariant :
                                  day.dayType === 'cardio' ? theme.colors.secondary :
@@ -440,11 +445,11 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
               }]} elevation={0}>
                 <View style={styles.dayHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Text style={{ fontSize: 20 }}>
-                      {day.dayType === 'rest' ? '😴' :
-                       day.dayType === 'cardio' ? '🏃' :
-                       day.dayType === 'active_recovery' ? '🧘' : '💪'}
-                    </Text>
+                    <MaterialCommunityIcons 
+                      name={day.dayType === 'rest' ? AppIcons.rest : day.dayType === 'cardio' ? AppIcons.cardio : day.dayType === 'active_recovery' ? AppIcons.recovery : AppIcons.workout} 
+                      size={20} 
+                      color={day.dayType === 'rest' ? theme.colors.surfaceVariant : day.dayType === 'cardio' ? theme.colors.secondary : day.dayType === 'active_recovery' ? theme.colors.tertiary : theme.colors.primary}
+                    />
                     <TextInput
                       mode="flat"
                       value={day.name}
@@ -454,7 +459,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                     />
                   </View>
                   <TouchableOpacity onPress={() => setDeleteConfirmDay(day.id)}>
-                    <Text style={{ color: theme.colors.error, fontSize: 18 }}>✕</Text>
+                    <MaterialCommunityIcons name={AppIcons.close} size={18} color={theme.colors.error} />
                   </TouchableOpacity>
                 </View>
 
@@ -462,7 +467,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                 {day.dayType === 'rest' && (
                   <View style={{ paddingVertical: 12 }}>
                     <Text variant="bodyMedium" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>
-                      Rest day - muscles recover and grow stronger 💤
+                      Rest day - muscles recover and grow stronger
                     </Text>
                   </View>
                 )}
@@ -471,7 +476,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                 {day.dayType === 'cardio' && (
                   <View style={{ paddingVertical: 12 }}>
                     <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>
-                      Cardio focus day - improve conditioning 🫀
+                      Cardio focus day - improve conditioning
                     </Text>
                     <TextInput
                       mode="outlined"
@@ -492,7 +497,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                 {day.dayType === 'active_recovery' && (
                   <View style={{ paddingVertical: 12 }}>
                     <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>
-                      Light movement to aid recovery 🧘
+                      Light movement to aid recovery
                     </Text>
                     <TextInput
                       mode="outlined"
@@ -533,9 +538,9 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                                 style={[styles.supersetGroup, { borderColor: theme.colors.primary }]} 
                                 elevation={0}
                               >
-                                <View style={styles.supersetHeader}>
+                                <View style={[styles.supersetHeader, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}>
                                   <Text variant="labelMedium" style={{ color: theme.colors.primary }}>
-                                    🔗 SUPERSET ({groupExercises.length} exercises)
+                                  <MaterialCommunityIcons name={AppIcons.superSet} size={12} color={theme.colors.primary} /> SUPERSET ({groupExercises.length} exercises)
                                   </Text>
                                   <TouchableOpacity onPress={() => {
                                     // Unlink all exercises in this superset
@@ -545,7 +550,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                                   </TouchableOpacity>
                                 </View>
                                 {groupExercises.map((groupEx, gIdx) => (
-                                  <View key={groupEx.id} style={[styles.exerciseRow, { marginLeft: 8 }]}>
+                                  <View key={groupEx.id} style={[styles.exerciseRow, { marginLeft: 8, borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}>
                                     <View style={{ flex: 1 }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                         <Text style={{ 
@@ -562,11 +567,11 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                                         <Text variant="bodyMedium">{groupEx.exerciseName}</Text>
                                       </View>
                                       <Text variant="bodySmall" style={{ color: theme.colors.outline, marginLeft: 28 }}>
-                                        {groupEx.sets} sets × {groupEx.repsMin}-{groupEx.repsMax} reps @ RIR {groupEx.rirTarget}
+                                        {groupEx.sets} sets × {groupEx.repsMin}-{groupEx.repsMax} reps
                                       </Text>
                                     </View>
                                     <TouchableOpacity onPress={() => setDeleteConfirmExercise({ dayId: day.id, exerciseId: groupEx.id })}>
-                                      <Text style={{ color: theme.colors.error }}>✕</Text>
+                                      <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.error} />
                                     </TouchableOpacity>
                                   </View>
                                 ))}
@@ -583,13 +588,13 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                           
                           return (
                             <View key={exercise.id} style={[
-                              styles.exerciseRow,
+                              styles.exerciseRow, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) },
                               isLinkingMode && !isSourceExercise && { borderColor: theme.colors.primary, borderWidth: 2, borderStyle: 'dashed' }
                             ]}>
                               <View style={{ flex: 1 }}>
                                 <Text variant="bodyMedium">{exercise.exerciseName}</Text>
                                 <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                                  {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps @ RIR {exercise.rirTarget}
+                                  {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps
                                 </Text>
                               </View>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -599,7 +604,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                                     onPress={() => setSupersetMode({ dayId: day.id, exerciseId: exercise.id })}
                                     style={{ padding: 4 }}
                                   >
-                                <Text style={{ fontSize: 16 }}>🔗</Text>
+                                <MaterialCommunityIcons name={AppIcons.superSet} size={16} color={theme.colors.tertiary} />
                               </TouchableOpacity>
                             ) : isSourceExercise ? (
                               <TouchableOpacity 
@@ -617,7 +622,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                               </TouchableOpacity>
                             )}
                             <TouchableOpacity onPress={() => setDeleteConfirmExercise({ dayId: day.id, exerciseId: exercise.id })}>
-                              <Text style={{ color: theme.colors.error }}>✕</Text>
+                              <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.error} />
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -641,14 +646,14 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                       <Surface style={{ marginTop: 12, padding: 12, borderRadius: 8, backgroundColor: theme.colors.secondaryContainer }} elevation={0}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                           <View style={{ flex: 1 }}>
-                            <Text variant="labelMedium" style={{ color: theme.colors.secondary }}>🏃 Cardio Finisher</Text>
+                            <Text variant="labelMedium" style={{ color: theme.colors.secondary }}>Cardio Finisher</Text>
                             <Text variant="bodyMedium">{day.cardioFinisher.name}</Text>
                             <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
                               {day.cardioFinisher.durationMinutes} min • {day.cardioFinisher.intensity}
                             </Text>
                           </View>
                           <TouchableOpacity onPress={() => handleRemoveCardioFinisher(day.id)}>
-                            <Text style={{ color: theme.colors.error }}>✕</Text>
+                            <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.error} />
                           </TouchableOpacity>
                         </View>
                       </Surface>
@@ -663,7 +668,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                         style={{ alignSelf: 'flex-start' }}
                         textColor={theme.colors.secondary}
                       >
-                        🏃 Add Cardio Finisher
+                        Add Cardio Finisher
                       </Button>
                     )}
                   </>
@@ -680,7 +685,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
             <View style={styles.summaryRow}>
               <Text variant="bodyMedium">{workoutDays.length} days per week</Text>
               <Text variant="bodyMedium">
-                {workoutDays.filter(d => d.dayType === 'workout').length} 💪 {workoutDays.filter(d => d.dayType === 'rest').length} 😴 {workoutDays.filter(d => d.dayType === 'cardio').length} 🏃 {workoutDays.filter(d => d.dayType === 'active_recovery').length} 🧘
+                {workoutDays.filter(d => d.dayType === 'workout').length} workout {workoutDays.filter(d => d.dayType === 'rest').length} rest {workoutDays.filter(d => d.dayType === 'cardio').length} cardio {workoutDays.filter(d => d.dayType === 'active_recovery').length} recovery
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -693,7 +698,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
             </View>
             {workoutDays.some(d => d.cardioFinisher) && (
               <View style={styles.summaryRow}>
-                <Text variant="bodyMedium">🏃 Cardio finishers</Text>
+                <Text variant="bodyMedium">Cardio finishers</Text>
                 <Text variant="bodyMedium">
                   {workoutDays.filter(d => d.cardioFinisher).length} days
                 </Text>
@@ -704,7 +709,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
       </ScrollView>
 
       {/* Save Button */}
-      <View style={[styles.footer, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
         <Button 
           mode="contained" 
           onPress={handleSaveProgram}
@@ -761,7 +766,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
               </ScrollView>
 
               {/* Exercise List */}
-              <View style={[styles.exerciseList, { backgroundColor: theme.colors.surface }]}>
+              <View style={[styles.exerciseList, { backgroundColor: theme.colors.surface, borderColor: withAlpha(theme.colors.outline, 0.2) }]}>
                 <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
                   {filteredExercises.map(ex => (
                     <TouchableOpacity
@@ -822,15 +827,6 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                   </View>
 
                   <View style={[styles.row, { marginTop: 8 }]}>
-                    <TextInput
-                      mode="outlined"
-                      label="RIR Target"
-                      value={newRir}
-                      onChangeText={setNewRir}
-                      keyboardType="number-pad"
-                      dense
-                      style={{ flex: 1, marginRight: 8 }}
-                    />
                     <TextInput
                       mode="outlined"
                       label="Rest (sec)"
@@ -926,7 +922,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                   backgroundColor: theme.colors.primaryContainer,
                 }}
               >
-                <Text style={{ fontSize: 24, marginRight: 12 }}>💪</Text>
+                <MaterialCommunityIcons name={AppIcons.workout} size={24} color={theme.colors.primary} style={{ marginRight: 12 }} />
                 <View>
                   <Text variant="titleMedium">Workout Day</Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -945,7 +941,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                   backgroundColor: theme.colors.surfaceVariant,
                 }}
               >
-                <Text style={{ fontSize: 24, marginRight: 12 }}>😴</Text>
+                <MaterialCommunityIcons name={AppIcons.rest} size={24} color={theme.colors.onSurfaceVariant} style={{ marginRight: 12 }} />
                 <View>
                   <Text variant="titleMedium">Rest Day</Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -964,7 +960,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                   backgroundColor: theme.colors.secondaryContainer,
                 }}
               >
-                <Text style={{ fontSize: 24, marginRight: 12 }}>🏃</Text>
+                <MaterialCommunityIcons name={AppIcons.cardio} size={24} color={theme.colors.secondary} style={{ marginRight: 12 }} />
                 <View>
                   <Text variant="titleMedium">Cardio Day</Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -983,7 +979,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                   backgroundColor: theme.colors.tertiaryContainer,
                 }}
               >
-                <Text style={{ fontSize: 24, marginRight: 12 }}>🧘</Text>
+                <MaterialCommunityIcons name={AppIcons.recovery} size={24} color={theme.colors.tertiary} style={{ marginRight: 12 }} />
                 <View>
                   <Text variant="titleMedium">Active Recovery</Text>
                   <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -1009,7 +1005,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
           }}
           style={{ maxHeight: '80%' }}
         >
-          <Dialog.Title>🏃 Choose Cardio Finisher</Dialog.Title>
+          <Dialog.Title>Choose Cardio Finisher</Dialog.Title>
           <Dialog.ScrollArea>
             <ScrollView style={{ paddingHorizontal: 24 }}>
               <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12 }}>
@@ -1036,19 +1032,19 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                       )}
                       <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
                         <Text variant="labelSmall" style={{ color: theme.colors.secondary }}>
-                          ⏱ {finisher.durationMinutes} min
+                          {finisher.durationMinutes} min
                         </Text>
                         <Text variant="labelSmall" style={{ color: theme.colors.primary }}>
-                          🔥 {finisher.intensity}
+                          {finisher.intensity}
                         </Text>
                         {finisher.caloriesBurned && (
                           <Text variant="labelSmall" style={{ color: theme.colors.secondary }}>
-                            ⚡ ~{finisher.caloriesBurned} cal
+                            ~{finisher.caloriesBurned} cal
                           </Text>
                         )}
                       </View>
                     </View>
-                    <Text style={{ fontSize: 20 }}>→</Text>
+                    <MaterialCommunityIcons name={AppIcons.chevronRight} size={20} color={theme.colors.onSurfaceVariant} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1117,7 +1113,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: 'rgba(0,212,255,0.05)',
+    backgroundColor: 'transparent',
   },
   dayHeader: {
     flexDirection: 'row',
@@ -1136,7 +1132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.2)',
+    borderBottomColor: 'transparent',
     borderRadius: 4,
   },
   supersetGroup: {
@@ -1152,13 +1148,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.2)',
+    borderBottomColor: 'transparent',
   },
   exerciseList: {
     maxHeight: 200,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(100,130,153,0.2)',
+    borderColor: 'transparent',
     overflow: 'hidden',
   },
   exerciseOption: {
@@ -1179,7 +1175,7 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100,130,153,0.2)',
+    borderTopColor: 'transparent',
   },
   saveButton: {
     paddingVertical: 8,

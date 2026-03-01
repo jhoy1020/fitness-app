@@ -60,36 +60,36 @@ describe('RestTimer', () => {
 
     it('shows pause button when running in compact mode', () => {
       render(<RestTimer compact={true} />, { wrapper });
-      expect(screen.getByText('⏸')).toBeTruthy();
+      expect(screen.getByTestId('pause-button')).toBeTruthy();
     });
 
     it('shows play button when paused in compact mode', () => {
       mockTimerState.isRunning = false;
       render(<RestTimer compact={true} />, { wrapper });
-      expect(screen.getByText('▶')).toBeTruthy();
+      expect(screen.getByTestId('play-button')).toBeTruthy();
     });
 
     it('shows stop button in compact mode', () => {
       render(<RestTimer compact={true} />, { wrapper });
-      expect(screen.getByText('⏹')).toBeTruthy();
+      expect(screen.getByTestId('stop-button')).toBeTruthy();
     });
 
     it('calls pauseTimer when pause button pressed', () => {
       render(<RestTimer compact={true} />, { wrapper });
-      fireEvent.press(screen.getByText('⏸'));
+      fireEvent.press(screen.getByTestId('pause-button'));
       expect(mockPauseTimer).toHaveBeenCalledTimes(1);
     });
 
     it('calls resumeTimer when play button pressed', () => {
       mockTimerState.isRunning = false;
       render(<RestTimer compact={true} />, { wrapper });
-      fireEvent.press(screen.getByText('▶'));
+      fireEvent.press(screen.getByTestId('play-button'));
       expect(mockResumeTimer).toHaveBeenCalledTimes(1);
     });
 
     it('calls stopTimer when stop button pressed', () => {
       render(<RestTimer compact={true} />, { wrapper });
-      fireEvent.press(screen.getByText('⏹'));
+      fireEvent.press(screen.getByTestId('stop-button'));
       expect(mockStopTimer).toHaveBeenCalledTimes(1);
     });
   });

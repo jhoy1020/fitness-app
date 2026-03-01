@@ -4,21 +4,23 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, useTheme, Chip } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { Workout, WorkoutSet, Exercise, CardioType } from '../../types';
 import { formatDate, formatDuration } from '../../utils';
+import { withAlpha, statusColors } from '../../theme';
 
 // Cardio type display mapping
-const CARDIO_DISPLAY: Record<CardioType, { label: string; emoji: string }> = {
-  running: { label: 'Running', emoji: '🏃' },
-  cycling: { label: 'Cycling', emoji: '🚴' },
-  walking: { label: 'Walking', emoji: '🚶' },
-  swimming: { label: 'Swimming', emoji: '🏊' },
-  rowing: { label: 'Rowing', emoji: '🚣' },
-  elliptical: { label: 'Elliptical', emoji: '🏋️' },
-  stair_climber: { label: 'Stair Climber', emoji: '🪜' },
-  hiit: { label: 'HIIT', emoji: '⚡' },
-  jump_rope: { label: 'Jump Rope', emoji: '🪢' },
-  other: { label: 'Cardio', emoji: '❤️' },
+const CARDIO_DISPLAY: Record<CardioType, { label: string; icon: string }> = {
+  running: { label: 'Running', icon: 'run' },
+  cycling: { label: 'Cycling', icon: 'bike' },
+  walking: { label: 'Walking', icon: 'walk' },
+  swimming: { label: 'Swimming', icon: 'swim' },
+  rowing: { label: 'Rowing', icon: 'rowing' },
+  elliptical: { label: 'Elliptical', icon: 'dumbbell' },
+  stair_climber: { label: 'Stair Climber', icon: 'stairs' },
+  hiit: { label: 'HIIT', icon: 'lightning-bolt' },
+  jump_rope: { label: 'Jump Rope', icon: 'jump-rope' },
+  other: { label: 'Cardio', icon: 'heart-pulse' },
 };
 
 interface WorkoutCardProps {
@@ -63,7 +65,7 @@ export function WorkoutCard({
   const renderCardioStats = () => {
     const cardioInfo = CARDIO_DISPLAY[workout.cardioType!];
     return (
-      <View style={styles.stats}>
+      <View style={[styles.stats, { borderColor: theme.colors.outlineVariant }]}>
         {workout.durationMinutes && (
           <View style={styles.stat}>
             <Text variant="titleLarge" style={{ color: theme.colors.primary }}>
@@ -110,7 +112,7 @@ export function WorkoutCard({
 
   // Render strength workout stats
   const renderStrengthStats = () => (
-    <View style={styles.stats}>
+    <View style={[styles.stats, { borderColor: theme.colors.outlineVariant }]}>
       <View style={styles.stat}>
         <Text variant="titleLarge" style={{ color: theme.colors.primary }}>
           {workingSets.length}
@@ -150,7 +152,7 @@ export function WorkoutCard({
                   style={{ backgroundColor: theme.colors.tertiaryContainer }}
                   textStyle={{ fontSize: 10 }}
                 >
-                  {CARDIO_DISPLAY[workout.cardioType!].emoji}
+                  <MaterialCommunityIcons name={CARDIO_DISPLAY[workout.cardioType!].icon as any} size={14} color={theme.colors.onTertiaryContainer} />
                 </Chip>
               )}
               <Text variant="titleMedium">{workout.name}</Text>
@@ -162,13 +164,13 @@ export function WorkoutCard({
           </View>
           <View style={styles.actions}>
             {onEdit && (
-              <TouchableOpacity onPress={onEdit} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 18 }}>✏️</Text>
+              <TouchableOpacity onPress={onEdit} style={{ padding: 8 }} testID="edit-button">
+                <MaterialCommunityIcons name="pencil" size={18} color={theme.colors.onSurfaceVariant} />
               </TouchableOpacity>
             )}
             {onDelete && (
-              <TouchableOpacity onPress={onDelete} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 18, color: '#FF4444', fontWeight: 'bold' }}>✕</Text>
+              <TouchableOpacity onPress={onDelete} style={{ padding: 8 }} testID="delete-button">
+                <MaterialCommunityIcons name="close" size={18} color={theme.colors.error} />
               </TouchableOpacity>
             )}
           </View>
@@ -179,9 +181,12 @@ export function WorkoutCard({
         {/* Show cardio details for cardio workouts */}
         {isCardio && workout.avgHeartRate && (
           <View style={styles.exerciseList}>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              ❤️ Avg HR: {workout.avgHeartRate} bpm
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="heart-pulse" size={14} color={theme.colors.error} />
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Avg HR: {workout.avgHeartRate} bpm
+              </Text>
+            </View>
           </View>
         )}
 
@@ -211,7 +216,7 @@ export function WorkoutCard({
         )}
 
         {workout.notes && (
-          <View style={styles.notes}>
+          <View style={[styles.notes, { borderColor: theme.colors.outlineVariant }]}>
             <Text variant="bodySmall" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>
               {workout.notes}
             </Text>
@@ -243,7 +248,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#e0e0e0',
   },
   stat: {
     alignItems: 'center',
@@ -256,7 +260,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderColor: '#e0e0e0',
   },
 });
 

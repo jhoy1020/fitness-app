@@ -8,6 +8,9 @@ import { useUser } from '../../context/UserContext';
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
 import WeightGraph from '../../components/WeightGraph/WeightGraph';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { withAlpha } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -243,9 +246,9 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
             )}
           </View>
           {bodyStats.fatToLose && bodyStats.fatToLose > 0 && (
-            <View style={styles.goalInfo}>
+            <View style={[styles.goalInfo, { backgroundColor: withAlpha(theme.colors.outline, 0.15) }]}>
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                🎯 {bodyStats.fatToLose.toFixed(1)} lbs to reach {bodyStats.goalBodyFat}% body fat goal
+                {bodyStats.fatToLose.toFixed(1)} lbs to reach {bodyStats.goalBodyFat}% body fat goal
               </Text>
             </View>
           )}
@@ -253,21 +256,47 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
       )}
 
       {/* Weight Tracking */}
-      <View style={styles.sectionHeader}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>📊 Weight History</Text>
-        <Button 
-          mode="contained-tonal" 
-          onPress={() => setShowWeightEntry(true)}
-          compact
-        >
-          + Log Weight
-        </Button>
-      </View>
-      <WeightGraph 
-        data={userState.weightHistory} 
-        height={200}
-        showBodyFat={true}
-      />
+      {userState.weightHistory && userState.weightHistory.length > 0 ? (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>Weight History</Text>
+            <Button 
+              mode="contained-tonal" 
+              onPress={() => setShowWeightEntry(true)}
+              compact
+            >
+              + Log Weight
+            </Button>
+          </View>
+          <View style={{ marginBottom: 16 }}>
+            <WeightGraph 
+              data={userState.weightHistory} 
+              height={200}
+              showBodyFat={true}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <Button 
+              mode="contained-tonal" 
+              onPress={() => setShowWeightEntry(true)}
+              compact
+            >
+              + Log Weight
+            </Button>
+          </View>
+          <Surface style={{ borderRadius: 12, padding: 24, marginBottom: 16, alignItems: 'center' }} elevation={1}>
+            <Text variant="titleMedium" style={{ fontWeight: 'bold', marginBottom: 12 }}>Weight History</Text>
+            <MaterialCommunityIcons name="chart-line" size={48} color={theme.colors.onSurfaceVariant} />
+            <Text variant="bodyLarge" style={{ marginTop: 8 }}>No weight data yet</Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}>
+              Add your first weight entry to see your progress
+            </Text>
+          </Surface>
+        </>
+      )}
 
       {/* Top Exercises */}
       {stats.topExercises.length > 0 && (
@@ -310,7 +339,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
             return (
               <TouchableOpacity
                 key={exercise.name}
-                style={styles.e1rmRow}
+                style={[styles.e1rmRow, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}
                 onPress={() => setSelectedExercise(
                   selectedExercise === exercise.name ? null : exercise.name
                 )}
@@ -374,7 +403,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
 
       {/* 1RM Calculator Card */}
       <Surface style={styles.card} elevation={1}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>🧮 1RM Calculator</Text>
+        <Text variant="titleMedium" style={styles.sectionTitle}>1RM Calculator</Text>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
           Estimate your one-rep max using the Epley formula
         </Text>
@@ -390,7 +419,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
               dense
             />
           </View>
-          <Text style={styles.calcX}>×</Text>
+          <Text style={[styles.calcX, { color: theme.colors.outline }]}>×</Text>
           <View style={styles.calcInput}>
             <TextInput
               label="Reps"
@@ -404,7 +433,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
           </View>
         </View>
         {calcWeight && calcReps && parseInt(calcReps) > 0 && parseInt(calcReps) <= 15 && (
-          <Surface style={[styles.calcResult, { backgroundColor: 'rgba(0,212,255,0.1)' }]} elevation={0}>
+          <Surface style={[styles.calcResult, { backgroundColor: withAlpha(theme.colors.primary, 0.1) }]} elevation={0}>
             <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>
               Estimated 1RM
             </Text>
@@ -437,7 +466,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
       {/* Weight Entry Dialog */}
       <Portal>
         <Dialog visible={showWeightEntry} onDismiss={() => setShowWeightEntry(false)}>
-          <Dialog.Title>📊 Log Weight</Dialog.Title>
+          <Dialog.Title>Log Weight</Dialog.Title>
           <Dialog.Content>
             <TextInput
               label="Weight (lbs)"
@@ -446,7 +475,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
               keyboardType="numeric"
               mode="outlined"
               style={{ marginBottom: 12 }}
-              left={<TextInput.Icon icon={() => <Text>⚖️</Text>} />}
+              left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="scale-bathroom" size={20} color={theme.colors.onSurfaceVariant} />} />}
             />
             <TextInput
               label="Body Fat % (optional)"
@@ -454,7 +483,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
               onChangeText={setNewBodyFat}
               keyboardType="numeric"
               mode="outlined"
-              left={<TextInput.Icon icon={() => <Text>📏</Text>} />}
+              left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="ruler" size={20} color={theme.colors.onSurfaceVariant} />} />}
             />
           </Dialog.Content>
           <Dialog.Actions>
@@ -526,7 +555,7 @@ const styles = StyleSheet.create({
   goalInfo: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: 'rgba(100,130,153,0.15)',
+    backgroundColor: 'transparent',
     borderRadius: 8,
   },
   exerciseRow: {
@@ -559,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.2)',
+    borderBottomColor: 'transparent',
   },
   e1rmInfo: {
     flex: 1,
@@ -589,7 +618,7 @@ const styles = StyleSheet.create({
   calcX: {
     fontSize: 20,
     marginHorizontal: 12,
-    color: '#648299',
+    color: 'transparent',
   },
   calcResult: {
     padding: 16,

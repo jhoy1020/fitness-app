@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text, Surface, useTheme, Button } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTimer } from '../../context';
 import { formatDuration, TIMER } from '../../utils';
 
@@ -56,14 +57,16 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
             <TouchableOpacity
               onPress={isRunning ? pauseTimer : resumeTimer}
               style={{ padding: 8 }}
+              testID={isRunning ? 'pause-button' : 'play-button'}
             >
-              <Text style={{ fontSize: 18 }}>{isRunning ? '⏸' : '▶'}</Text>
+              <MaterialCommunityIcons name={isRunning ? 'pause' : 'play'} size={18} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={stopTimer}
               style={{ padding: 8 }}
+              testID="stop-button"
             >
-              <Text style={{ fontSize: 18 }}>⏹</Text>
+              <MaterialCommunityIcons name="stop" size={18} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
         </View>
@@ -127,19 +130,19 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
           onPress={() => adjustTimer(totalTime - timeRemaining)}
           style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 24 }}
         >
-          <Text style={{ fontSize: 20 }}>🔄</Text>
+          <MaterialCommunityIcons name="refresh" size={20} color={theme.colors.onSurfaceVariant} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={isRunning ? pauseTimer : resumeTimer}
           style={{ padding: 16, backgroundColor: theme.colors.primary, borderRadius: 32, marginHorizontal: 16 }}
         >
-          <Text style={{ fontSize: 28, color: '#fff' }}>{isRunning ? '⏸' : '▶'}</Text>
+          <MaterialCommunityIcons name={isRunning ? 'pause' : 'play'} size={28} color={theme.colors.onPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={stopTimer}
           style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 24 }}
         >
-          <Text style={{ fontSize: 20 }}>⏭</Text>
+          <MaterialCommunityIcons name="skip-next" size={20} color={theme.colors.onSurfaceVariant} />
         </TouchableOpacity>
       </View>
     </Surface>

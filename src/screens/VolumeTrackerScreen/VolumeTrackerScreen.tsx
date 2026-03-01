@@ -6,6 +6,7 @@ import { Text, Surface, useTheme, SegmentedButtons } from 'react-native-paper';
 import { useMesoCycle } from '../../context/MesoCycleContext';
 import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import { InfoTooltip, ABBREVIATIONS } from '../../components';
+import { statusColors, withAlpha } from '../../theme';
 import type { MuscleGroup, MuscleVolumeTracker } from '../../types';
 
 interface VolumeTrackerScreenProps {
@@ -61,10 +62,10 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
   const getStatusColor = (status: MuscleVolumeTracker['status']) => {
     switch (status) {
       case 'below_mev': return theme.colors.outline;
-      case 'at_mev': return '#FF9800';
-      case 'in_mav': return '#4CAF50';
-      case 'near_mrv': return '#FF9800';
-      case 'at_mrv': return '#F44336';
+      case 'at_mev': return statusColors.intermediate;
+      case 'in_mav': return statusColors.beginner;
+      case 'near_mrv': return statusColors.intermediate;
+      case 'at_mrv': return statusColors.advanced;
       default: return theme.colors.outline;
     }
   };
@@ -115,19 +116,19 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
       <Surface style={styles.summaryCard} elevation={1}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
-            <Text variant="headlineMedium" style={{ color: '#4CAF50' }}>
+            <Text variant="headlineMedium" style={{ color: statusColors.beginner }}>
               {volumeData.filter(d => d.status === 'in_mav').length}
             </Text>
             <Text variant="labelSmall">Optimal</Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text variant="headlineMedium" style={{ color: '#FF9800' }}>
+            <Text variant="headlineMedium" style={{ color: statusColors.intermediate }}>
               {volumeData.filter(d => ['near_mrv', 'at_mev'].includes(d.status)).length}
             </Text>
             <Text variant="labelSmall">Caution</Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text variant="headlineMedium" style={{ color: '#F44336' }}>
+            <Text variant="headlineMedium" style={{ color: statusColors.advanced }}>
               {volumeData.filter(d => d.status === 'at_mrv').length}
             </Text>
             <Text variant="labelSmall">At Max</Text>
@@ -149,12 +150,12 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
           <InfoTooltip {...ABBREVIATIONS.MEV} size="small" />
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
+          <View style={[styles.legendDot, { backgroundColor: statusColors.beginner }]} />
           <Text variant="labelSmall">MAV</Text>
           <InfoTooltip {...ABBREVIATIONS.MAV} size="small" />
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#F44336' }]} />
+          <View style={[styles.legendDot, { backgroundColor: statusColors.advanced }]} />
           <Text variant="labelSmall">MRV</Text>
           <InfoTooltip {...ABBREVIATIONS.MRV} size="small" />
         </View>
@@ -182,7 +183,7 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
 
               {/* Volume Bar */}
               <View style={styles.volumeBarContainer}>
-                <View style={styles.volumeBar}>
+                <View style={[styles.volumeBar, { backgroundColor: withAlpha(theme.colors.onSurface, 0.1) }]}>
                   {/* MEV marker */}
                   <View style={[styles.marker, { left: `${mevPosition}%` }]}>
                     <View style={[styles.markerLine, { backgroundColor: theme.colors.outline }]} />
@@ -195,14 +196,14 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
                       { 
                         left: `${mavLowPosition}%`, 
                         width: `${mavHighPosition - mavLowPosition}%`,
-                        backgroundColor: '#4CAF50' + '30',
+                        backgroundColor: withAlpha(statusColors.beginner, 0.19),
                       }
                     ]} 
                   />
                   
                   {/* MRV marker */}
                   <View style={[styles.marker, { left: '100%' }]}>
-                    <View style={[styles.markerLine, { backgroundColor: '#F44336' }]} />
+                    <View style={[styles.markerLine, { backgroundColor: statusColors.advanced }]} />
                   </View>
 
                   {/* Progress fill */}
@@ -228,10 +229,10 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
                 <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
                   {item.mev}
                 </Text>
-                <Text variant="labelSmall" style={{ color: '#4CAF50' }}>
+                <Text variant="labelSmall" style={{ color: statusColors.beginner }}>
                   {item.mavLow}-{item.mavHigh}
                 </Text>
-                <Text variant="labelSmall" style={{ color: '#F44336' }}>
+                <Text variant="labelSmall" style={{ color: statusColors.advanced }}>
                   {item.mrv}
                 </Text>
               </View>
@@ -316,7 +317,6 @@ const styles = StyleSheet.create({
   volumeBar: {
     flex: 1,
     height: 12,
-    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 6,
     overflow: 'hidden',
     position: 'relative',

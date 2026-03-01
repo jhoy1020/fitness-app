@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Text, useTheme, Surface, Chip } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 // Define workout shape for calendar
 interface CalendarWorkout {
@@ -253,7 +254,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({ workouts, onDayPre
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.navButton} onPress={goToPreviousMonth}>
-          <Text style={{ fontSize: 20 }}>◀️</Text>
+          <MaterialCommunityIcons name="chevron-left" size={24} color={theme.colors.onSurface} />
         </TouchableOpacity>
         <TouchableOpacity onPress={goToToday}>
           <Text variant="titleLarge" style={styles.monthTitle}>
@@ -261,7 +262,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({ workouts, onDayPre
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={goToNextMonth}>
-          <Text style={{ fontSize: 20 }}>▶️</Text>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.colors.onSurface} />
         </TouchableOpacity>
       </View>
 

@@ -100,11 +100,6 @@ describe('ABBREVIATIONS', () => {
     expect(ABBREVIATIONS.TDEE.title).toContain('TDEE');
   });
 
-  it('contains RIR definition', () => {
-    expect(ABBREVIATIONS.RIR).toBeDefined();
-    expect(ABBREVIATIONS.RIR.title).toContain('RIR');
-  });
-
   it('contains 1RM definition', () => {
     expect(ABBREVIATIONS['1RM']).toBeDefined();
     expect(ABBREVIATIONS['1RM'].title).toContain('1RM');

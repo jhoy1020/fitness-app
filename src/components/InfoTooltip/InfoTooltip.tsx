@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
 import { Text, Surface, useTheme } from 'react-native-paper';
+import { withAlpha } from '../../theme';
 
 interface InfoTooltipProps {
   title: string;
@@ -41,7 +42,7 @@ export function InfoTooltip({ title, description, size = 'small' }: InfoTooltipP
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <Pressable style={styles.overlay} onPress={() => setVisible(false)}>
+        <Pressable style={[styles.overlay, { backgroundColor: withAlpha(theme.colors.onSurface, 0.5) }]} onPress={() => setVisible(false)}>
           <Surface style={[styles.tooltip, { backgroundColor: theme.colors.surface }]} elevation={4}>
             <Text variant="titleMedium" style={{ marginBottom: 8, color: theme.colors.primary }}>
               {title}
@@ -74,7 +75,6 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
@@ -103,10 +103,6 @@ export const ABBREVIATIONS = {
   TDEE: {
     title: 'TDEE - Total Daily Energy Expenditure',
     description: 'The total calories you burn in a day, including BMR plus all physical activity (exercise, walking, daily tasks). This is calculated by multiplying your BMR by an activity factor.',
-  },
-  RIR: {
-    title: 'RIR - Reps In Reserve',
-    description: 'How many more reps you could have done before failure. RIR 2 means you stopped with 2 reps "left in the tank." Lower RIR = closer to failure = more intensity.',
   },
   MEV: {
     title: 'MEV - Minimum Effective Volume',

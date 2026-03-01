@@ -11,6 +11,8 @@ import type {
   WorkoutAction,
   Exercise,
   TemplateExercise,
+  PausedWorkout,
+  DeloadState,
 } from '../types';
 import {
   getAllWorkouts,
@@ -33,6 +35,14 @@ const initialState: WorkoutState = {
   restTimeRemaining: 0,
   workoutHistory: [],
   templates: [],
+  pausedWorkout: null,
+  deloadState: {
+    lastAnalysis: null,
+    lastDeloadDate: null,
+    isDismissed: false,
+    isInDeloadWeek: false,
+    deloadStartDate: null,
+  },
 };
 
 // Reducer
@@ -175,6 +185,68 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         workoutHistory: updatedHistory,
       };
 
+    case 'PAUSE_WORKOUT':
+      Storage.setItem('fitness_paused_workout', JSON.stringify(action.payload)).catch(e => {
+        console.error('Failed to save paused workout:', e);
+      });
+      return {
+        ...state,
+        pausedWorkout: action.payload,
+      };
+
+    case 'CLEAR_PAUSED_WORKOUT':
+      Storage.removeItem('fitness_paused_workout').catch(e => {
+        console.error('Failed to clear paused workout:', e);
+      });
+      return {
+        ...state,
+        pausedWorkout: null,
+      };
+
+    case 'SET_DELOAD_STATE':
+      Storage.setItem('fitness_deload_state', JSON.stringify(action.payload)).catch(e => {
+        console.error('Failed to save deload state:', e);
+      });
+      return { ...state, deloadState: action.payload };
+
+    case 'START_DELOAD_WEEK': {
+      const newDeloadState: DeloadState = {
+        ...state.deloadState,
+        isInDeloadWeek: true,
+        deloadStartDate: new Date().toISOString(),
+        isDismissed: false,
+      };
+      Storage.setItem('fitness_deload_state', JSON.stringify(newDeloadState)).catch(e => {
+        console.error('Failed to save deload state:', e);
+      });
+      return { ...state, deloadState: newDeloadState };
+    }
+
+    case 'END_DELOAD_WEEK': {
+      const endedDeloadState: DeloadState = {
+        ...state.deloadState,
+        isInDeloadWeek: false,
+        deloadStartDate: null,
+        lastDeloadDate: new Date().toISOString(),
+        isDismissed: false,
+      };
+      Storage.setItem('fitness_deload_state', JSON.stringify(endedDeloadState)).catch(e => {
+        console.error('Failed to save deload state:', e);
+      });
+      return { ...state, deloadState: endedDeloadState };
+    }
+
+    case 'DISMISS_DELOAD': {
+      const dismissedState: DeloadState = {
+        ...state.deloadState,
+        isDismissed: true,
+      };
+      Storage.setItem('fitness_deload_state', JSON.stringify(dismissedState)).catch(e => {
+        console.error('Failed to save deload state:', e);
+      });
+      return { ...state, deloadState: dismissedState };
+    }
+
     default:
       return state;
   }
@@ -198,6 +270,11 @@ interface WorkoutContextType {
   stopRestTimer: () => void;
   tickRestTimer: () => void;
   repeatWorkout: (workoutId: string) => Promise<void>;
+  pauseWorkout: (data: PausedWorkout) => void;
+  clearPausedWorkout: () => void;
+  startDeloadWeek: () => void;
+  endDeloadWeek: () => void;
+  dismissDeload: () => void;
   dispatch: React.Dispatch<WorkoutAction>;
 }
 
@@ -219,6 +296,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         console.error('Failed to load workout history:', e);
+      }
+      try {
+        const savedPaused = await Storage.getItem('fitness_paused_workout');
+        if (savedPaused) {
+          const paused = JSON.parse(savedPaused);
+          dispatch({ type: 'PAUSE_WORKOUT', payload: paused });
+        }
+      } catch (e) {
+        console.error('Failed to load paused workout:', e);
+      }
+      try {
+        const savedDeload = await Storage.getItem('fitness_deload_state');
+        if (savedDeload) {
+          const deload = JSON.parse(savedDeload);
+          dispatch({ type: 'SET_DELOAD_STATE', payload: deload });
+        }
+      } catch (e) {
+        console.error('Failed to load deload state:', e);
       }
       loadTemplates();
     };
@@ -325,6 +420,26 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     }
   }, [state.workoutHistory]);
 
+  const pauseWorkout = useCallback((data: PausedWorkout) => {
+    dispatch({ type: 'PAUSE_WORKOUT', payload: data });
+  }, []);
+
+  const clearPausedWorkout = useCallback(() => {
+    dispatch({ type: 'CLEAR_PAUSED_WORKOUT' });
+  }, []);
+
+  const startDeloadWeek = useCallback(() => {
+    dispatch({ type: 'START_DELOAD_WEEK' });
+  }, []);
+
+  const endDeloadWeek = useCallback(() => {
+    dispatch({ type: 'END_DELOAD_WEEK' });
+  }, []);
+
+  const dismissDeload = useCallback(() => {
+    dispatch({ type: 'DISMISS_DELOAD' });
+  }, []);
+
   const value: WorkoutContextType = {
     state,
     startWorkout,
@@ -342,6 +457,11 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     stopRestTimer,
     tickRestTimer,
     repeatWorkout,
+    pauseWorkout,
+    clearPausedWorkout,
+    startDeloadWeek,
+    endDeloadWeek,
+    dismissDeload,
     dispatch,
   };
 

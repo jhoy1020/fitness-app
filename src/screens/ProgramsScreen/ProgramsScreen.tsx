@@ -8,6 +8,9 @@ import { useUser } from '../../context/UserContext';
 import { TRAINING_PROGRAMS } from '../../data/programs/programs';
 import type { TrainingProgram, MuscleGroup } from '../../types';
 import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { statusColors, withAlpha } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 interface ProgramsScreenProps {
   navigation: any;
@@ -81,9 +84,9 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
   // Get difficulty color
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return '#4CAF50';
-      case 'intermediate': return '#FF9800';
-      case 'advanced': return '#F44336';
+      case 'beginner': return statusColors.beginner;
+      case 'intermediate': return statusColors.intermediate;
+      case 'advanced': return statusColors.advanced;
       default: return theme.colors.primary;
     }
   };
@@ -116,7 +119,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
       {/* Create Your Own */}
       <TouchableOpacity onPress={() => navigation.navigate('CreateProgram')}>
         <Surface style={[styles.createCard, { borderColor: theme.colors.primary }]} elevation={0}>
-          <Text style={{ fontSize: 24, marginRight: 12 }}>✨</Text>
+          <MaterialCommunityIcons name="auto-fix" size={24} color={theme.colors.primary} style={{ marginRight: 12 }} />
           <View style={{ flex: 1 }}>
             <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
               Create Your Own Program
@@ -125,7 +128,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
               Build a custom workout split with your favorite exercises
             </Text>
           </View>
-          <Text style={{ fontSize: 20, color: theme.colors.primary }}>›</Text>
+          <MaterialCommunityIcons name={AppIcons.chevronRight} size={20} color={theme.colors.primary} />
         </Surface>
       </TouchableOpacity>
 
@@ -133,7 +136,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
       {mesoState.activeMesoCycle && (
         <Surface style={[styles.warningCard, { backgroundColor: theme.colors.errorContainer }]} elevation={1}>
           <Text variant="bodyMedium" style={{ color: theme.colors.onErrorContainer }}>
-            ⚠️ You have an active mesocycle: "{mesoState.activeMesoCycle.name}". 
+            You have an active mesocycle: "{mesoState.activeMesoCycle.name}". 
             Starting a new program will replace it.
           </Text>
         </Surface>
@@ -180,7 +183,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {filteredPrograms.length === 0 ? (
           <Surface style={styles.emptyCard} elevation={1}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>🔍</Text>
+            <MaterialCommunityIcons name={AppIcons.search} size={48} color={theme.colors.outline} style={{ marginBottom: 16 }} />
             <Text variant="titleMedium">No programs match your filters</Text>
             <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>
               Try adjusting your filter criteria
@@ -214,7 +217,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                         </Text>
                       </View>
                     </View>
-                    <Text style={{ fontSize: 24 }}>›</Text>
+                    <MaterialCommunityIcons name={AppIcons.chevronRight} size={24} color={theme.colors.onSurfaceVariant} />
                   </View>
 
                   <Text 
@@ -309,12 +312,12 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                   <Text variant="titleSmall" style={{ marginBottom: 8 }}>Weekly Schedule</Text>
                   {selectedProgram.weekTemplate.days.map((day, idx) => {
                     const dayType = day.dayType || 'workout';
-                    const getDayIcon = () => {
+                    const getDayIcon = (): string => {
                       switch (dayType) {
-                        case 'rest': return '😴';
-                        case 'cardio': return '🏃';
-                        case 'active_recovery': return '🧘';
-                        default: return '💪';
+                        case 'rest': return AppIcons.rest;
+                        case 'cardio': return AppIcons.cardio;
+                        case 'active_recovery': return AppIcons.recovery;
+                        default: return AppIcons.workout;
                       }
                     };
                     const getDayColor = () => {
@@ -327,9 +330,9 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                     };
                     
                     return (
-                      <View key={idx} style={styles.dayPreview}>
+                      <View key={idx} style={[styles.dayPreview, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Text style={{ fontSize: 16 }}>{getDayIcon()}</Text>
+                          <MaterialCommunityIcons name={getDayIcon() as any} size={16} color={getDayColor()} />
                           <Text variant="bodyMedium" style={{ fontWeight: '600' }}>
                             Day {day.dayNumber}: {day.name}
                           </Text>
@@ -387,12 +390,12 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                   {exercisesWithSuggestions.length > 0 && (
                     <React.Fragment>
                       <Divider style={{ marginVertical: 12 }} />
-                      <Text variant="titleSmall" style={{ marginBottom: 8 }}>🎯 Suggested Starting Weights</Text>
+                      <Text variant="titleSmall" style={{ marginBottom: 8 }}>Suggested Starting Weights</Text>
                       <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 8 }}>
                         Based on your 1RM records:
                       </Text>
                       {exercisesWithSuggestions.map((exercise, idx) => (
-                        <View key={idx} style={styles.weightSuggestion}>
+                        <View key={idx} style={[styles.weightSuggestion, { borderBottomColor: withAlpha(theme.colors.outline, 0.15) }]}>
                           <Text variant="bodyMedium" style={{ flex: 1 }}>
                             {exercise.name}
                           </Text>
@@ -408,7 +411,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                       ))}
                       {programExercisesWithWeights.length > exercisesWithSuggestions.length && (
                         <Text variant="bodySmall" style={{ color: theme.colors.outline, marginTop: 8, fontStyle: 'italic' }}>
-                          💡 Add more 1RM records in Profile to get suggestions for {programExercisesWithWeights.length - exercisesWithSuggestions.length} more exercises
+                          Add more 1RM records in Profile to get suggestions for {programExercisesWithWeights.length - exercisesWithSuggestions.length} more exercises
                         </Text>
                       )}
                     </React.Fragment>
@@ -417,8 +420,8 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                   {exercisesWithSuggestions.length === 0 && (
                     <React.Fragment>
                       <Divider style={{ marginVertical: 12 }} />
-                      <View style={styles.noWeightHint}>
-                        <Text style={{ fontSize: 20, marginRight: 8 }}>💡</Text>
+                      <View style={[styles.noWeightHint, { backgroundColor: withAlpha(theme.colors.outline, 0.1) }]}>
+                        <MaterialCommunityIcons name={AppIcons.info} size={20} color={theme.colors.outline} style={{ marginRight: 8 }} />
                         <Text variant="bodySmall" style={{ color: theme.colors.outline, flex: 1 }}>
                           Add 1RM records in your Profile to get personalized starting weight suggestions for this program!
                         </Text>
@@ -538,19 +541,19 @@ const styles = StyleSheet.create({
   dayPreview: {
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.2)',
+    borderBottomColor: 'transparent',
   },
   weightSuggestion: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.15)',
+    borderBottomColor: 'transparent',
   },
   noWeightHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(100,130,153,0.1)',
+    backgroundColor: 'transparent',
     padding: 12,
     borderRadius: 8,
   },

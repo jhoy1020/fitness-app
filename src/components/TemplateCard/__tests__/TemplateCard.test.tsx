@@ -105,14 +105,14 @@ describe('TemplateCard', () => {
       const onEdit = jest.fn();
       render(<TemplateCard template={mockTemplate} onEdit={onEdit} />, { wrapper });
       
-      expect(screen.getByText('✏️')).toBeTruthy();
+      expect(screen.getByTestId('edit-button')).toBeTruthy();
     });
 
     it('calls onEdit when edit button pressed', () => {
       const onEdit = jest.fn();
       render(<TemplateCard template={mockTemplate} onEdit={onEdit} />, { wrapper });
       
-      fireEvent.press(screen.getByText('✏️'));
+      fireEvent.press(screen.getByTestId('edit-button'));
       expect(onEdit).toHaveBeenCalledTimes(1);
     });
 
@@ -120,14 +120,14 @@ describe('TemplateCard', () => {
       const onDelete = jest.fn();
       render(<TemplateCard template={mockTemplate} onDelete={onDelete} />, { wrapper });
       
-      expect(screen.getByText('🗑')).toBeTruthy();
+      expect(screen.getByTestId('delete-button')).toBeTruthy();
     });
 
     it('calls onDelete when delete button pressed', () => {
       const onDelete = jest.fn();
       render(<TemplateCard template={mockTemplate} onDelete={onDelete} />, { wrapper });
       
-      fireEvent.press(screen.getByText('🗑'));
+      fireEvent.press(screen.getByTestId('delete-button'));
       expect(onDelete).toHaveBeenCalledTimes(1);
     });
 
@@ -135,14 +135,14 @@ describe('TemplateCard', () => {
       const onStart = jest.fn();
       render(<TemplateCard template={mockTemplate} onStart={onStart} />, { wrapper });
       
-      expect(screen.getByText('▶ Start Workout')).toBeTruthy();
+      expect(screen.getByText('Start Workout')).toBeTruthy();
     });
 
     it('calls onStart when start button pressed', () => {
       const onStart = jest.fn();
       render(<TemplateCard template={mockTemplate} onStart={onStart} />, { wrapper });
       
-      fireEvent.press(screen.getByText('▶ Start Workout'));
+      fireEvent.press(screen.getByText('Start Workout'));
       expect(onStart).toHaveBeenCalledTimes(1);
     });
   });

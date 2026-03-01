@@ -4,6 +4,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { statusColors } from '../../theme';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -94,12 +96,15 @@ export function GoalProgress({
       <ProgressBar
         progress={progress}
         showPercentage={false}
-        color={isComplete ? '#4CAF50' : theme.colors.primary}
+        color={isComplete ? statusColors.beginner : theme.colors.primary}
       />
       {isComplete && (
-        <Text variant="labelSmall" style={{ color: '#4CAF50', marginTop: 4 }}>
-          🎉 Goal achieved!
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+          <MaterialCommunityIcons name="party-popper" size={14} color={statusColors.beginner} />
+          <Text variant="labelSmall" style={{ color: statusColors.beginner, marginLeft: 4 }}>
+            Goal achieved!
+          </Text>
+        </View>
       )}
     </View>
   );

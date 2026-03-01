@@ -8,3 +8,4 @@ export { ProgramsScreen } from './ProgramsScreen/ProgramsScreen';
 export { VolumeTrackerScreen } from './VolumeTrackerScreen/VolumeTrackerScreen';
 export { MesoCycleScreen } from './MesoCycleScreen/MesoCycleScreen';
 export { CreateProgramScreen } from './CreateProgramScreen/CreateProgramScreen';
+export { WorkoutDetailScreen } from './WorkoutDetailScreen/WorkoutDetailScreen';

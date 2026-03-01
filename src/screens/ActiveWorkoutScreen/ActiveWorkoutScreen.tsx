@@ -1,7 +1,7 @@
 // Active Workout Screen - New UI Flow
 // 1. Name workout → 2. Add exercises → 3. Tap exercise to log sets → 4. Timer runs during rest
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import {
   Text,
@@ -28,17 +28,17 @@ import { calculatePlates, formatPlatesDisplay, getWarmupSets, WarmupSet } from '
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
 import { getExerciseDemo } from '../../data/exerciseVideos';
 import { InfoTooltip, ABBREVIATIONS } from '../../components';
-import { CardioFinisher } from '../../types';
-
-// Responsive breakpoint
-const NARROW_SCREEN_WIDTH = 375;
+import { CardioFinisher, ExerciseTrackingType } from '../../types';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { withAlpha, spacing as sp, NARROW_SCREEN_WIDTH } from '../../theme';
+import { AppIcons } from '../../theme/icons';
 
 // Types
 interface SetEntry {
   id: string;
   weight: number;
   reps: number;
-  rir: number; // Reps in Reserve (0-4)
+  durationSeconds?: number; // For duration-based exercises
   timestamp: Date;
 }
 
@@ -46,12 +46,12 @@ interface WorkoutExercise {
   id: string;
   name: string;
   muscleGroup: string;
+  trackingType: ExerciseTrackingType; // 'weight_reps' | 'duration' | 'weight_duration'
   sets: SetEntry[];
   // Program targets (if from a program)
   targetSets?: number;
   repsMin?: number;
   repsMax?: number;
-  rirTarget?: number;
   restSeconds?: number;
   // Superset grouping
   supersetGroupId?: string;
@@ -70,7 +70,7 @@ const REST_PRESETS = [60, 90, 120, 180];
 
 export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenProps) {
   const theme = useTheme();
-  const { state: workoutState, dispatch: workoutDispatch } = useWorkout();
+  const { state: workoutState, dispatch: workoutDispatch, pauseWorkout, clearPausedWorkout } = useWorkout();
   const { state: mesoState, dispatch: mesoDispatch } = useMesoCycle();
   const { getOneRepMax } = useUser();
   const insets = useSafeAreaInsets();
@@ -98,7 +98,13 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   // Set entry inputs
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
-  const [rir, setRir] = useState('2'); // Default RIR of 2
+  const [duration, setDuration] = useState(''); // seconds for duration-based exercises
+  
+  // Helper: look up tracking type from exercise library
+  const getTrackingType = (exerciseName: string): ExerciseTrackingType => {
+    const libEntry = EXERCISE_LIBRARY.find(e => e.name === exerciseName);
+    return libEntry?.trackingType || 'weight_reps';
+  };
   
   // Muscle group filter for exercise picker
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
@@ -140,6 +146,12 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   const [cardioFinisher, setCardioFinisher] = useState<CardioFinisher | null>(null);
   const [showCardioFinisherDialog, setShowCardioFinisherDialog] = useState(false);
   const [cardioFinisherCompleted, setCardioFinisherCompleted] = useState(false);
+
+  // Cancel confirmation dialog
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+
+  // Ref to prevent beforeRemove from re-saving after complete/cancel
+  const workoutCompletedRef = useRef(false);
 
   // Helper: Get superset groups
   const getSupersetGroups = (): Map<string, WorkoutExercise[]> => {
@@ -207,7 +219,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   };
 
   // Calculate suggested progression based on RP-style double progression
-  const getSuggestedTarget = (lastPerf: { weight: number; reps: number; rir?: number } | null, exercise?: WorkoutExercise) => {
+  const getSuggestedTarget = (lastPerf: { weight: number; reps: number } | null, exercise?: WorkoutExercise) => {
     // Get rep range from exercise or use defaults
     const minReps = exercise?.repsMin || 8;
     const maxReps = exercise?.repsMax || 12;
@@ -226,7 +238,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
     
     // RP-style double progression:
     // 1. If reps are below max of rep range, add reps
-    // 2. If reps hit max of rep range (or RIR was too high), increase weight and reset to min reps
+    // 2. If reps hit max of rep range, increase weight and reset to min reps
     
     if (lastPerf.reps < maxReps) {
       // Add 1-2 reps at same weight
@@ -260,12 +272,12 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
               id: Date.now().toString() + Math.random(),
               name: set.exerciseName,
               muscleGroup: set.muscleGroup || 'other',
+              trackingType: getTrackingType(set.exerciseName),
               sets: [],
               // Program targets
               targetSets: set.targetSets,
               repsMin: set.repsMin,
               repsMax: set.repsMax,
-              rirTarget: set.rirTarget,
               restSeconds: set.restSeconds,
               // Superset data
               supersetGroupId: set.supersetGroupId,
@@ -282,8 +294,70 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
         }
       }
       setIsNaming(false);
+    } else if (!route.params?.templateWorkout && workoutState.pausedWorkout) {
+      // Restore paused workout
+      const paused = workoutState.pausedWorkout;
+      setWorkoutName(paused.workoutName);
+      setWorkoutNotes(paused.workoutNotes);
+      setExercises(paused.exercises.map((e: any) => ({
+        ...e,
+        trackingType: e.trackingType || getTrackingType(e.name),
+        sets: e.sets.map((s: any) => ({
+          ...s,
+          timestamp: new Date(s.timestamp),
+        })),
+      })));
+      setRestTarget(paused.restTarget);
+      setTimerSeconds(paused.timerSeconds);
+      setIsProgramWorkout(paused.isProgramWorkout);
+      if (paused.cardioFinisher) {
+        setCardioFinisher(paused.cardioFinisher);
+      }
+      setIsNaming(false);
+      clearPausedWorkout();
     }
   }, [route.params]);
+
+  // Intercept back button: pause workout instead of discarding
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      // Allow navigating away if still in naming phase, no exercises, or workout completed/cancelled
+      if (isNaming || exercises.length === 0 || workoutCompletedRef.current) {
+        return;
+      }
+
+      // Prevent default back behavior
+      e.preventDefault();
+
+      // Save workout state so it can be resumed
+      pauseWorkout({
+        workoutName,
+        workoutNotes,
+        exercises: exercises.map(ex => ({
+          ...ex,
+          sets: ex.sets.map(s => ({
+            ...s,
+            timestamp: s.timestamp instanceof Date ? s.timestamp.toISOString() : s.timestamp,
+          })),
+        })),
+        restTarget,
+        timerSeconds,
+        isProgramWorkout,
+        pausedAt: new Date().toISOString(),
+        cardioFinisher: cardioFinisher || undefined,
+      });
+
+      // Stop timer if running
+      if (timerRunning) {
+        setTimerRunning(false);
+      }
+
+      // Allow the navigation to proceed
+      navigation.dispatch(e.data.action);
+    });
+
+    return unsubscribe;
+  }, [navigation, isNaming, exercises, workoutName, workoutNotes, restTarget, timerSeconds, isProgramWorkout, cardioFinisher, timerRunning, pauseWorkout]);
 
   // Timer effect - countdown from restTarget with sound
   useEffect(() => {
@@ -327,7 +401,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
 
   // Get exercise history
   const getExerciseHistory = (exerciseName: string) => {
-    const history: { date: string; sets: { weight: number; reps: number; rir?: number }[] }[] = [];
+    const history: { date: string; sets: { weight: number; reps: number }[] }[] = [];
     
     workoutState.workoutHistory.forEach(workout => {
       const sets = ((workout as any).sets || []).filter((s: any) => 
@@ -336,7 +410,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       if (sets.length > 0) {
         history.push({
           date: workout.date,
-          sets: sets.map((s: any) => ({ weight: s.weight, reps: s.reps, rir: s.rir })),
+          sets: sets.map((s: any) => ({ weight: s.weight, reps: s.reps })),
         });
       }
     });
@@ -405,19 +479,17 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
     setShowWarmup(false);
   };
 
-  // Get suggested weight based on last performance and RIR
-  const getSuggestedWeight = (exerciseName: string, targetReps: number, targetRir: number) => {
+  // Get suggested weight based on last performance
+  const getSuggestedWeight = (exerciseName: string, targetReps: number) => {
     const lastPerf = getLastPerformance(exerciseName);
     if (!lastPerf) return null;
     
     // Calculate e1RM from last workout
     const last1RM = calculate1RM_Epley(lastPerf.weight, lastPerf.reps);
     
-    // Calculate target weight for given reps and RIR
-    // Higher RIR = lower weight, Lower RIR = higher weight
-    const rirAdjustment = (2 - targetRir) * 2.5; // +/-2.5% per RIR difference from 2
+    // Calculate target weight for given reps
     const repPercentage = 100 - (targetReps * 2.5); // ~2.5% less per rep above 1
-    const targetPercentage = (repPercentage + rirAdjustment) / 100;
+    const targetPercentage = repPercentage / 100;
     
     const suggestedWeight = Math.round(last1RM * targetPercentage / 5) * 5; // Round to 5
     return Math.max(suggestedWeight, 45); // Minimum bar weight
@@ -512,12 +584,19 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       id: Date.now().toString(),
       name: exerciseName,
       muscleGroup: muscleGroup,
+      trackingType: getTrackingType(exerciseName),
       sets: [],
     };
     setExercises(prev => [...prev, newExercise]);
     setShowExercisePicker(false);
     setExerciseSearch('');
     setActiveExerciseId(newExercise.id);
+    // Reset inputs for the new exercise type
+    if (newExercise.trackingType !== 'weight_reps') {
+      setWeight('');
+      setReps('');
+      setDuration('');
+    }
   };
 
   // Remove exercise from workout
@@ -534,13 +613,30 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       setActiveExerciseId(null);
     } else {
       setActiveExerciseId(exerciseId);
-      // Pre-fill with last set values if available
       const exercise = exercises.find(e => e.id === exerciseId);
-      if (exercise && exercise.sets.length > 0) {
+      
+      if (exercise && (exercise.trackingType === 'duration' || exercise.trackingType === 'weight_duration')) {
+        // Duration-based exercise
+        if (exercise.sets.length > 0) {
+          const lastSet = exercise.sets[exercise.sets.length - 1];
+          setDuration((lastSet.durationSeconds || 0).toString());
+          if (exercise.trackingType === 'weight_duration') {
+            setWeight(lastSet.weight.toString());
+          } else {
+            setWeight('');
+          }
+          setReps('');
+        } else {
+          setDuration('');
+          setWeight('');
+          setReps('');
+        }
+      } else if (exercise && exercise.sets.length > 0) {
+        // Pre-fill with last set values if available
         const lastSet = exercise.sets[exercise.sets.length - 1];
         setWeight(lastSet.weight.toString());
         setReps(lastSet.reps.toString());
-        setRir(lastSet.rir?.toString() || '2');
+        setDuration('');
       } else if (exercise) {
         // No sets logged yet - use suggested values from history
         const lastPerf = getLastPerformance(exercise.name);
@@ -556,30 +652,40 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
           setWeight('');
           setReps('');
         }
-        // Set RIR from program target if available
-        setRir(exercise.rirTarget?.toString() || '2');
+        setDuration('');
       } else {
         setWeight('');
         setReps('');
-        setRir('2');
+        setDuration('');
       }
     }
   };
 
   // Log a set for the active exercise
   const handleLogSet = () => {
-    if (!activeExerciseId || !weight || !reps) return;
+    if (!activeExerciseId) return;
+    
+    const currentExercise = exercises.find(e => e.id === activeExerciseId);
+    if (!currentExercise) return;
+    
+    const tt = currentExercise.trackingType;
+    
+    // Validate based on tracking type
+    if (tt === 'duration') {
+      if (!duration) return;
+    } else if (tt === 'weight_duration') {
+      if (!weight || !duration) return;
+    } else {
+      if (!weight || !reps) return;
+    }
 
-    const parsedRir = parseInt(rir, 10);
     const newSet: SetEntry = {
       id: Date.now().toString(),
-      weight: parseFloat(weight),
-      reps: parseInt(reps, 10),
-      rir: isNaN(parsedRir) ? 2 : parsedRir,
+      weight: tt === 'duration' ? 0 : parseFloat(weight) || 0,
+      reps: (tt === 'duration' || tt === 'weight_duration') ? 0 : parseInt(reps, 10) || 0,
+      durationSeconds: (tt === 'duration' || tt === 'weight_duration') ? parseInt(duration, 10) || 0 : undefined,
       timestamp: new Date(),
     };
-
-    const currentExercise = exercises.find(e => e.id === activeExerciseId);
     
     setExercises(prev => prev.map(exercise => {
       if (exercise.id === activeExerciseId) {
@@ -601,7 +707,6 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
         // Clear weight/reps for the next exercise (they may have different values)
         setWeight('');
         setReps('');
-        setRir('2');
         // Short transition timer (5 seconds to switch exercises)
         setTimerSeconds(0);
         setTimerRunning(true);
@@ -648,7 +753,6 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       id: `warmup-${Date.now()}-${index}`,
       weight: Math.round(workingWeight * scheme.percent / 5) * 5, // Round to nearest 5
       reps: scheme.reps,
-      rir: 5, // Warm-ups should feel easy
       timestamp: new Date(),
     }));
 
@@ -680,13 +784,18 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
 
   // Actually complete and save the workout
   const completeWorkout = () => {
+    // Mark as completed so beforeRemove doesn't re-save
+    workoutCompletedRef.current = true;
+    // Clear any paused workout state
+    clearPausedWorkout();
+
     const allSets = exercises.flatMap(e => 
       e.sets.map(s => ({
         exerciseName: e.name,
         muscleGroup: e.muscleGroup,
         weight: s.weight,
         reps: s.reps,
-        rir: s.rir,
+        durationSeconds: s.durationSeconds,
         timestamp: s.timestamp,
         defaultRestSeconds: 90,
       }))
@@ -717,7 +826,6 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
           weight: s.weight,
           targetReps: s.reps,
           actualReps: s.reps,
-          rir: s.rir,
           completed: true,
         })),
       })),
@@ -743,6 +851,8 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
     }
     
     setTimerRunning(false);
+    // Clear exercises so beforeRemove doesn't re-save as paused
+    setExercises([]);
     
     // Navigate to summary screen
     navigation.replace('WorkoutSummary', { workout, volumeByMuscle, isProgramWorkout });
@@ -866,6 +976,16 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
 
       {/* Exercise List */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* Deload Mode Indicator */}
+        {workoutState.deloadState.isInDeloadWeek && (
+          <Surface style={{ backgroundColor: theme.colors.primaryContainer, borderRadius: 12, padding: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }} elevation={0}>
+            <MaterialCommunityIcons name={AppIcons.deload} size={16} color={theme.colors.onPrimaryContainer} style={{ marginRight: 8 }} />
+            <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, flex: 1 }}>
+              Deload Mode — Focus on form with lighter weight and fewer sets
+            </Text>
+          </Surface>
+        )}
+
         {exercises.length === 0 ? (
           <Surface style={styles.emptyCard} elevation={1}>
             <Text variant="bodyLarge" style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -904,18 +1024,21 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       const position = (exercise.supersetOrder || 0) + 1;
                       return (
                         <Surface style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: theme.colors.tertiaryContainer }} elevation={0}>
-                          <Text variant="labelSmall" style={{ color: theme.colors.tertiary }}>🔗 {position}/{groupMembers.length}</Text>
+                          <Text variant="labelSmall" style={{ color: theme.colors.tertiary }}>
+                            <MaterialCommunityIcons name={AppIcons.superSet} size={12} color={theme.colors.tertiary} /> {position}/{groupMembers.length}
+                          </Text>
                         </Surface>
                       );
                     })()}
                     {exercise.isWarmupComplete && (
-                      <Text style={{ fontSize: 12 }}>🔥</Text>
+                      <MaterialCommunityIcons name={AppIcons.warmup} size={12} color={theme.colors.error} />
                     )}
                   </View>
                   <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                     {exercise.muscleGroup} • {exercise.sets.length}{exercise.targetSets ? `/${exercise.targetSets}` : ''} sets
-                    {exercise.repsMin && exercise.repsMax && ` • ${exercise.repsMin}-${exercise.repsMax} reps`}
-                    {exercise.rirTarget !== undefined && ` @ RIR ${exercise.rirTarget}`}
+                    {exercise.trackingType === 'weight_reps' && exercise.repsMin && exercise.repsMax && ` • ${exercise.repsMin}-${exercise.repsMax} reps`}
+                    {exercise.trackingType === 'duration' && ' • timed'}
+                    {exercise.trackingType === 'weight_duration' && ' • weight+time'}
                   </Text>
                 </View>
                 <View style={styles.exerciseActions}>
@@ -925,37 +1048,40 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       onPress={() => handleCreateSuperset(exercise.id)}
                       style={{ padding: 8 }}
                     >
-                      <Text style={{ fontSize: 16 }}>🔗</Text>
+                      <MaterialCommunityIcons name={AppIcons.superSet} size={16} color={theme.colors.tertiary} />
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       onPress={() => handleRemoveSuperset(exercise.id)}
                       style={{ padding: 8 }}
                     >
-                      <Text style={{ fontSize: 16 }}>✂️</Text>
+                      <MaterialCommunityIcons name="content-cut" size={16} color={theme.colors.error} />
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
                     onPress={() => handleShowSubstitutes(exercise.id)}
                     style={{ padding: 8 }}
                   >
-                    <Text style={{ fontSize: 16 }}>🔄</Text>
+                    <MaterialCommunityIcons name={AppIcons.swapExercise} size={16} color={theme.colors.onSurfaceVariant} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleShowHistory(exercise.name)}
                     style={{ padding: 8 }}
                   >
-                    <Text style={{ fontSize: 16 }}>📊</Text>
+                    <MaterialCommunityIcons name="chart-bar" size={16} color={theme.colors.onSurfaceVariant} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setDeleteConfirmExercise(exercise.id)}
                     style={{ padding: 8 }}
                   >
-                    <Text style={{ fontSize: 16, color: theme.colors.error }}>✕</Text>
+                    <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.error} />
                   </TouchableOpacity>
-                  <Text style={{ fontSize: 20, marginLeft: 4 }}>
-                    {activeExerciseId === exercise.id ? '▲' : '▼'}
-                  </Text>
+                  <MaterialCommunityIcons 
+                    name={activeExerciseId === exercise.id ? AppIcons.chevronUp : AppIcons.chevronDown} 
+                    size={20} 
+                    color={theme.colors.onSurfaceVariant} 
+                    style={{ marginLeft: 4 }}
+                  />
                 </View>
               </TouchableOpacity>
 
@@ -968,52 +1094,52 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   <View style={styles.quickActionsRow}>
                     {!exercise.isWarmupComplete && exercise.sets.length === 0 && (
                       <TouchableOpacity 
-                        style={[styles.quickActionBtn, { backgroundColor: 'rgba(255,107,53,0.15)' }]}
+                        style={[styles.quickActionBtn, { backgroundColor: withAlpha(theme.colors.error, 0.15) }]}
                         onPress={() => handleShowWarmup(exercise.id)}
                       >
-                        <Text style={{ fontSize: 14 }}>🔥</Text>
-                        <Text variant="labelSmall" style={{ color: '#FF6B35' }}>Warm-up</Text>
+                        <MaterialCommunityIcons name={AppIcons.warmup} size={14} color={theme.colors.error} />
+                        <Text variant="labelSmall" style={{ color: theme.colors.error }}>Warm-up</Text>
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity 
-                      style={[styles.quickActionBtn, { backgroundColor: 'rgba(153,102,255,0.15)' }]}
+                      style={[styles.quickActionBtn, { backgroundColor: withAlpha(theme.colors.tertiary, 0.15) }]}
                       onPress={() => {
                         setDemoExerciseName(exercise.name);
                         setShowExerciseDemo(true);
                       }}
                     >
-                      <Text style={{ fontSize: 14 }}>🎥</Text>
-                      <Text variant="labelSmall" style={{ color: '#9966FF' }}>Demo</Text>
+                      <MaterialCommunityIcons name={AppIcons.demo} size={14} color={theme.colors.tertiary} />
+                      <Text variant="labelSmall" style={{ color: theme.colors.tertiary }}>Demo</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={[styles.quickActionBtn, { backgroundColor: 'rgba(0,212,255,0.15)' }]}
+                      style={[styles.quickActionBtn, { backgroundColor: withAlpha(theme.colors.primary, 0.15) }]}
                       onPress={() => setShowPlateCalc(true)}
                     >
-                      <Text style={{ fontSize: 14 }}>🧮</Text>
+                      <MaterialCommunityIcons name={AppIcons.plateCalc} size={14} color={theme.colors.primary} />
                       <Text variant="labelSmall" style={{ color: theme.colors.primary }}>Plates</Text>
                     </TouchableOpacity>
                     {!exercise.supersetGroupId ? (
                       <TouchableOpacity 
-                        style={[styles.quickActionBtn, { backgroundColor: 'rgba(173,255,47,0.15)' }]}
+                        style={[styles.quickActionBtn, { backgroundColor: withAlpha(theme.colors.tertiary, 0.15) }]}
                         onPress={() => handleCreateSuperset(exercise.id)}
                       >
-                        <Text style={{ fontSize: 14 }}>🔗</Text>
+                        <MaterialCommunityIcons name={AppIcons.superSet} size={14} color={theme.colors.tertiary} />
                         <Text variant="labelSmall" style={{ color: theme.colors.tertiary }}>Superset</Text>
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity 
-                        style={[styles.quickActionBtn, { backgroundColor: 'rgba(255,71,87,0.15)' }]}
+                        style={[styles.quickActionBtn, { backgroundColor: withAlpha(theme.colors.error, 0.15) }]}
                         onPress={() => handleRemoveSuperset(exercise.id)}
                       >
-                        <Text style={{ fontSize: 14 }}>✂️</Text>
+                        <MaterialCommunityIcons name="content-cut" size={14} color={theme.colors.error} />
                         <Text variant="labelSmall" style={{ color: theme.colors.error }}>Unlink</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                   
-                  {/* Last Performance & Target */}
-                  {(lastPerf || suggested) && (
-                    <View style={styles.perfRow}>
+                  {/* Last Performance & Target (only for weight_reps exercises) */}
+                  {exercise.trackingType === 'weight_reps' && (lastPerf || suggested) && (
+                    <View style={[styles.perfRow, { backgroundColor: withAlpha(theme.colors.primary, 0.05) }]}>
                       {lastPerf && (
                         <View style={styles.perfItem}>
                           <Text variant="labelSmall" style={{ color: theme.colors.outline }}>LAST</Text>
@@ -1026,7 +1152,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       {suggested && (
                         <View style={styles.perfItem}>
                           <Text variant="labelSmall" style={{ color: theme.colors.primary }}>
-                            {(suggested as any).basedOn1RM ? '🎯 1RM TARGET' : 'TARGET'}
+                            {(suggested as any).basedOn1RM ? '1RM TARGET' : 'TARGET'}
                           </Text>
                           <Text variant="bodyMedium" style={{ color: theme.colors.primary, fontWeight: '600' }}>
                             {suggested.weight} × {suggested.reps}+
@@ -1048,9 +1174,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   {(() => {
                     const exerciseData = EXERCISE_LIBRARY.find(e => e.name === exercise.name);
                     return exerciseData?.tips ? (
-                      <View style={styles.tipsBox}>
+                      <View style={[styles.tipsBox, { backgroundColor: withAlpha(theme.colors.primary, 0.08) }]}>
                         <Text variant="labelSmall" style={{ color: theme.colors.primary, fontWeight: '600' }}>
-                          💡 TIP
+                          TIP
                         </Text>
                         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                           {exerciseData.tips}
@@ -1059,37 +1185,62 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     ) : null;
                   })()}
                   
-                  {/* Previous Sets */}
+                  {/* Previous Sets - adapts to tracking type */}
                   {exercise.sets.length > 0 && (
                     <View style={styles.setsTable}>
-                      <View style={styles.setsHeader}>
+                      <View style={[styles.setsHeader, { borderBottomColor: withAlpha(theme.colors.outline, 0.25) }]}>
                         <Text style={[styles.setCell, styles.setNumCell]}>Set</Text>
-                        <Text style={[styles.setCell, styles.weightCell]}>Weight</Text>
-                        <Text style={[styles.setCell, styles.repsCell]}>Reps</Text>
-                        <View style={{ flex: 0.6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                          <Text>RIR</Text>
-                          <InfoTooltip {...ABBREVIATIONS.RIR} size="small" />
-                        </View>
+                        {exercise.trackingType === 'duration' ? (
+                          <Text style={[styles.setCell, styles.weightCell, { flex: 2 }]}>Duration</Text>
+                        ) : exercise.trackingType === 'weight_duration' ? (
+                          <>
+                            <Text style={[styles.setCell, styles.weightCell]}>Weight</Text>
+                            <Text style={[styles.setCell, styles.repsCell]}>Duration</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={[styles.setCell, styles.weightCell]}>Weight</Text>
+                            <Text style={[styles.setCell, styles.repsCell]}>Reps</Text>
+                          </>
+                        )}
                         <Text style={[styles.setCell, styles.deleteCell]}>{' '}</Text>
                       </View>
                       {exercise.sets.map((set, index) => (
                         <View key={set.id} style={styles.setRow}>
                           <Text style={[styles.setCell, styles.setNumCell]}>{index + 1}</Text>
-                          <Text style={[styles.setCell, styles.weightCell]}>{set.weight} lbs</Text>
-                          <Text style={[styles.setCell, styles.repsCell]}>{set.reps}</Text>
-                          <Text style={[styles.setCell, styles.rirCell, { color: set.rir <= 1 ? theme.colors.error : set.rir >= 3 ? '#00E676' : theme.colors.onSurface }]}>{set.rir}</Text>
+                          {exercise.trackingType === 'duration' ? (
+                            <Text style={[styles.setCell, styles.weightCell, { flex: 2 }]}>
+                              {(set.durationSeconds || 0) >= 60
+                                ? `${Math.floor((set.durationSeconds || 0) / 60)}m ${(set.durationSeconds || 0) % 60}s`
+                                : `${set.durationSeconds || 0}s`}
+                            </Text>
+                          ) : exercise.trackingType === 'weight_duration' ? (
+                            <>
+                              <Text style={[styles.setCell, styles.weightCell]}>{set.weight} lbs</Text>
+                              <Text style={[styles.setCell, styles.repsCell]}>
+                                {(set.durationSeconds || 0) >= 60
+                                  ? `${Math.floor((set.durationSeconds || 0) / 60)}m ${(set.durationSeconds || 0) % 60}s`
+                                  : `${set.durationSeconds || 0}s`}
+                              </Text>
+                            </>
+                          ) : (
+                            <>
+                              <Text style={[styles.setCell, styles.weightCell]}>{set.weight} lbs</Text>
+                              <Text style={[styles.setCell, styles.repsCell]}>{set.reps}</Text>
+                            </>
+                          )}
                           <TouchableOpacity 
                             onPress={() => setDeleteConfirmSet({ exerciseId: exercise.id, setId: set.id })}
                             style={styles.deleteCell}
                           >
-                            <Text style={{ color: theme.colors.error }}>✕</Text>
+                            <MaterialCommunityIcons name={AppIcons.close} size={14} color={theme.colors.error} />
                           </TouchableOpacity>
                         </View>
                       ))}
                     </View>
                   )}
 
-                  {/* Add New Set - Responsive layout */}
+                  {/* Add New Set - adapts to tracking type */}
                   <View style={[
                     styles.addSetRow, 
                     isNarrowScreen && styles.addSetRowNarrow
@@ -1098,38 +1249,68 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       styles.inputGroup,
                       isNarrowScreen && styles.inputGroupNarrow
                     ]}>
-                      <TextInput
-                        label="Weight"
-                        value={weight}
-                        onChangeText={setWeight}
-                        keyboardType="numeric"
-                        mode="outlined"
-                        style={[styles.setInput, isNarrowScreen && { minWidth: 80 }]}
-                        dense
-                      />
-                      <TextInput
-                        label="Reps"
-                        value={reps}
-                        onChangeText={setReps}
-                        keyboardType="numeric"
-                        mode="outlined"
-                        style={[styles.setInput, isNarrowScreen && { minWidth: 70 }]}
-                        dense
-                      />
-                      <TextInput
-                        label="RIR"
-                        value={rir}
-                        onChangeText={setRir}
-                        keyboardType="numeric"
-                        mode="outlined"
-                        style={[styles.setInput, { flex: isNarrowScreen ? 1 : 0.6 }, isNarrowScreen && { minWidth: 60 }]}
-                        dense
-                      />
+                      {exercise.trackingType === 'duration' ? (
+                        <TextInput
+                          label="Seconds"
+                          value={duration}
+                          onChangeText={setDuration}
+                          keyboardType="numeric"
+                          mode="outlined"
+                          style={[styles.setInput, { flex: 1 }]}
+                          dense
+                        />
+                      ) : exercise.trackingType === 'weight_duration' ? (
+                        <>
+                          <TextInput
+                            label="Weight"
+                            value={weight}
+                            onChangeText={setWeight}
+                            keyboardType="numeric"
+                            mode="outlined"
+                            style={[styles.setInput, isNarrowScreen && { minWidth: 80 }]}
+                            dense
+                          />
+                          <TextInput
+                            label="Seconds"
+                            value={duration}
+                            onChangeText={setDuration}
+                            keyboardType="numeric"
+                            mode="outlined"
+                            style={[styles.setInput, isNarrowScreen && { minWidth: 70 }]}
+                            dense
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <TextInput
+                            label="Weight"
+                            value={weight}
+                            onChangeText={setWeight}
+                            keyboardType="numeric"
+                            mode="outlined"
+                            style={[styles.setInput, isNarrowScreen && { minWidth: 80 }]}
+                            dense
+                          />
+                          <TextInput
+                            label="Reps"
+                            value={reps}
+                            onChangeText={setReps}
+                            keyboardType="numeric"
+                            mode="outlined"
+                            style={[styles.setInput, isNarrowScreen && { minWidth: 70 }]}
+                            dense
+                          />
+                        </>
+                      )}
                     </View>
                     <Button
                       mode="contained"
                       onPress={handleLogSet}
-                      disabled={!weight || !reps}
+                      disabled={
+                        exercise.trackingType === 'duration' ? !duration
+                        : exercise.trackingType === 'weight_duration' ? (!weight || !duration)
+                        : (!weight || !reps)
+                      }
                       style={[styles.logButton, isNarrowScreen && styles.logButtonNarrow]}
                     >
                       Log Set
@@ -1137,9 +1318,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   </View>
 
                   {/* Quick Actions */}
-                  <View style={styles.quickActions}>
-                    {/* Use Suggested button */}
-                    {suggested && exercise.sets.length < (exercise.targetSets || 4) && (
+                  <View style={[styles.quickActions, { borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
+                    {/* Use Suggested button (only for weight_reps) */}
+                    {exercise.trackingType === 'weight_reps' && suggested && exercise.sets.length < (exercise.targetSets || 4) && (
                       <Button
                         mode="contained-tonal"
                         compact
@@ -1147,25 +1328,33 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                           setWeight(suggested.weight.toString());
                           setReps(suggested.reps.toString());
                         }}
-                        icon={() => <Text>🎯</Text>}
+                        icon={() => <MaterialCommunityIcons name={AppIcons.target} size={16} color={theme.colors.primary} />}
                         style={{ marginRight: 8 }}
                       >
                         Use Suggested ({suggested.weight}×{suggested.reps})
                       </Button>
                     )}
-                    {exercise.sets.length === 0 && weight && (
+                    {exercise.trackingType === 'weight_reps' && exercise.sets.length === 0 && weight && (
                       <Button
                         mode="outlined"
                         compact
                         onPress={() => handleGenerateWarmup(exercise.id, parseFloat(weight))}
-                        icon={() => <Text>🔥</Text>}
+                        icon={() => <MaterialCommunityIcons name={AppIcons.warmup} size={16} color={theme.colors.error} />}
                       >
                         Generate Warm-up
                       </Button>
                     )}
-                    {exercise.sets.length > 0 && !suggested && (
+                    {exercise.trackingType === 'weight_reps' && exercise.sets.length > 0 && !suggested && (
                       <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                        💡 Tip: Previous weight was {exercise.sets[exercise.sets.length - 1].weight} lbs
+                        Tip: Previous weight was {exercise.sets[exercise.sets.length - 1].weight} lbs
+                      </Text>
+                    )}
+                    {exercise.trackingType !== 'weight_reps' && exercise.sets.length > 0 && (
+                      <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                        Last: {(exercise.sets[exercise.sets.length - 1].durationSeconds || 0) >= 60
+                          ? `${Math.floor((exercise.sets[exercise.sets.length - 1].durationSeconds || 0) / 60)}m ${(exercise.sets[exercise.sets.length - 1].durationSeconds || 0) % 60}s`
+                          : `${exercise.sets[exercise.sets.length - 1].durationSeconds || 0}s`}
+                        {exercise.trackingType === 'weight_duration' ? ` @ ${exercise.sets[exercise.sets.length - 1].weight} lbs` : ''}
                       </Text>
                     )}
                   </View>
@@ -1180,7 +1369,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       <Surface style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]} elevation={3}>
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => setShowCancelDialog(true)}
           style={styles.bottomButton}
         >
           Cancel
@@ -1205,7 +1394,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
         ]}
         onPress={() => setShowExercisePicker(true)}
       >
-        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>+ Add Exercise</Text>
+        <Text style={{ color: theme.colors.onPrimary, fontWeight: 'bold', fontSize: 16 }}>+ Add Exercise</Text>
       </TouchableOpacity>
 
       {/* Exercise Picker Dialog */}
@@ -1226,10 +1415,11 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   onPress={() => setMuscleFilter(null)}
                   style={[
                     styles.filterChip,
+                    { backgroundColor: withAlpha(theme.colors.outline, 0.2) },
                     !muscleFilter && { backgroundColor: theme.colors.primary }
                   ]}
                 >
-                  <Text style={{ color: !muscleFilter ? '#fff' : theme.colors.onSurface, fontSize: 12 }}>All</Text>
+                  <Text style={{ color: !muscleFilter ? theme.colors.onPrimary : theme.colors.onSurface, fontSize: 12 }}>All</Text>
                 </TouchableOpacity>
                 {muscleGroups.map(mg => (
                   <TouchableOpacity
@@ -1237,11 +1427,12 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     onPress={() => setMuscleFilter(muscleFilter === mg ? null : mg)}
                     style={[
                       styles.filterChip,
+                      { backgroundColor: withAlpha(theme.colors.outline, 0.2) },
                       muscleFilter === mg && { backgroundColor: theme.colors.primary }
                     ]}
                   >
                     <Text style={{ 
-                      color: muscleFilter === mg ? '#fff' : theme.colors.onSurface, 
+                      color: muscleFilter === mg ? theme.colors.onPrimary : theme.colors.onSurface, 
                       fontSize: 12,
                       textTransform: 'capitalize' 
                     }}>{mg}</Text>
@@ -1262,13 +1453,21 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     paddingVertical: 10,
                     paddingHorizontal: 12,
                     borderBottomWidth: 1,
-                    borderBottomColor: 'rgba(100,130,153,0.15)',
+                    borderBottomColor: withAlpha(theme.colors.outline, 0.15),
                   }}
                 >
-                  <Text style={{ fontSize: 18, marginRight: 12 }}>🏋️</Text>
+                  <MaterialCommunityIcons 
+                    name={exercise.trackingType === 'duration' ? AppIcons.timer : AppIcons.workout} 
+                    size={18} 
+                    color={theme.colors.primary} 
+                    style={{ marginRight: 12 }}
+                  />
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.onSurface }}>{exercise.name}</Text>
-                    <Text style={{ fontSize: 12, color: theme.colors.outline }}>{exercise.muscleGroup} • {exercise.equipment}</Text>
+                    <Text style={{ fontSize: 12, color: theme.colors.outline }}>
+                      {exercise.muscleGroup} • {exercise.equipment}
+                      {exercise.trackingType === 'duration' ? ' • timed' : exercise.trackingType === 'weight_duration' ? ' • weight+time' : ''}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1283,7 +1482,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       {/* Exercise History Dialog */}
       <Portal>
         <Dialog visible={showExerciseHistory} onDismiss={() => setShowExerciseHistory(false)}>
-          <Dialog.Title>📊 {historyExerciseName} History</Dialog.Title>
+          <Dialog.Title>{historyExerciseName} History</Dialog.Title>
           <Dialog.ScrollArea style={{ maxHeight: 400 }}>
             <ScrollView>
               {getExerciseHistory(historyExerciseName).length === 0 ? (
@@ -1292,13 +1491,13 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 </Text>
               ) : (
                 getExerciseHistory(historyExerciseName).map((session, idx) => (
-                  <View key={idx} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(100,130,153,0.2)' }}>
+                  <View key={idx} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: withAlpha(theme.colors.outline, 0.2) }}>
                     <Text variant="labelMedium" style={{ color: theme.colors.primary, marginBottom: 4 }}>
                       {new Date(session.date).toLocaleDateString()}
                     </Text>
                     {session.sets.map((set, setIdx) => (
                       <Text key={setIdx} variant="bodySmall" style={{ color: theme.colors.onSurface }}>
-                        Set {setIdx + 1}: {set.weight} × {set.reps} {set.rir !== undefined && `@ RIR ${set.rir}`}
+                        Set {setIdx + 1}: {set.weight} × {set.reps}
                       </Text>
                     ))}
                   </View>
@@ -1315,7 +1514,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       {/* Exercise Substitutes Dialog */}
       <Portal>
         <Dialog visible={showSubstitutes} onDismiss={() => setShowSubstitutes(false)}>
-          <Dialog.Title>🔄 Swap Exercise</Dialog.Title>
+          <Dialog.Title>Swap Exercise</Dialog.Title>
           <Dialog.ScrollArea style={{ maxHeight: 400 }}>
             <ScrollView>
               {substituteExerciseId && (
@@ -1329,7 +1528,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                       title={ex.name}
                       description={`${ex.equipment} • ${ex.muscleGroup}`}
                       onPress={() => handleSwapExercise(ex.name, ex.muscleGroup)}
-                      left={() => <Text style={{ fontSize: 20, marginLeft: 8 }}>💪</Text>}
+                      left={() => <MaterialCommunityIcons name={AppIcons.muscle} size={20} color={theme.colors.primary} style={{ marginLeft: 8 }} />}
                       style={{ paddingVertical: 4 }}
                     />
                   ))}
@@ -1351,7 +1550,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       {/* Warm-up Sets Dialog */}
       <Portal>
         <Dialog visible={showWarmup} onDismiss={() => setShowWarmup(false)}>
-          <Dialog.Title>🔥 Warm-up Sets</Dialog.Title>
+          <Dialog.Title>Warm-up Sets</Dialog.Title>
           <Dialog.ScrollArea style={{ maxHeight: 400 }}>
             <ScrollView style={{ padding: 16 }}>
               <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 16 }}>
@@ -1384,7 +1583,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       {/* Plate Calculator Dialog */}
       <Portal>
         <Dialog visible={showPlateCalc} onDismiss={() => setShowPlateCalc(false)}>
-          <Dialog.Title>🧮 Plate Calculator</Dialog.Title>
+          <Dialog.Title>Plate Calculator</Dialog.Title>
           <Dialog.Content>
             <TextInput
               label="Target Weight (lbs)"
@@ -1413,7 +1612,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 </Text>
                 {!calculatePlates(parseFloat(plateCalcWeight), parseFloat(plateCalcBar) || 45, false).achievable && (
                   <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8 }}>
-                    ⚠️ Can't hit exact weight. Closest: {calculatePlates(parseFloat(plateCalcWeight), parseFloat(plateCalcBar) || 45, false).totalWeight} lbs
+                    Can't hit exact weight. Closest: {calculatePlates(parseFloat(plateCalcWeight), parseFloat(plateCalcBar) || 45, false).totalWeight} lbs
                   </Text>
                 )}
               </Surface>
@@ -1428,7 +1627,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       {/* Superset Picker Dialog */}
       <Portal>
         <Dialog visible={showSupersetPicker} onDismiss={() => setShowSupersetPicker(false)}>
-          <Dialog.Title>🔗 Create Superset</Dialog.Title>
+          <Dialog.Title>Create Superset</Dialog.Title>
           <Dialog.ScrollArea style={{ maxHeight: 400 }}>
             <ScrollView>
               <Text variant="bodySmall" style={{ padding: 16, color: theme.colors.outline }}>
@@ -1442,7 +1641,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     title={ex.name}
                     description={ex.muscleGroup}
                     onPress={() => handlePairSuperset(ex.id)}
-                    left={() => <Text style={{ fontSize: 20, marginLeft: 8 }}>💪</Text>}
+                    left={() => <MaterialCommunityIcons name={AppIcons.muscle} size={20} color={theme.colors.primary} style={{ marginLeft: 8 }} />}
                     style={{ paddingVertical: 4 }}
                   />
                 ))}
@@ -1462,7 +1661,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       {/* Exercise Demo Dialog */}
       <Portal>
         <Dialog visible={showExerciseDemo} onDismiss={() => setShowExerciseDemo(false)}>
-          <Dialog.Title>🎥 {demoExerciseName}</Dialog.Title>
+          <Dialog.Title>{demoExerciseName}</Dialog.Title>
           <Dialog.ScrollArea style={{ maxHeight: 450 }}>
             <ScrollView style={{ padding: 16 }}>
               {(() => {
@@ -1470,14 +1669,14 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 const exercise = EXERCISE_LIBRARY.find(e => e.name === demoExerciseName);
                 return (
                   <>
-                    <Surface style={{ padding: 16, borderRadius: 12, marginBottom: 16, backgroundColor: 'rgba(0,212,255,0.1)' }} elevation={0}>
+                    <Surface style={{ padding: 16, borderRadius: 12, marginBottom: 16, backgroundColor: withAlpha(theme.colors.primary, 0.1) }} elevation={0}>
                       <Text variant="bodyMedium">{demo.description}</Text>
                     </Surface>
                     
                     <Text variant="titleSmall" style={{ marginBottom: 8 }}>Form Cues:</Text>
                     {demo.cues.map((cue, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', marginBottom: 8, alignItems: 'flex-start' }}>
-                        <Text style={{ marginRight: 8 }}>✓</Text>
+                        <MaterialCommunityIcons name={AppIcons.check} size={14} color={theme.colors.onSurface} style={{ marginRight: 8 }} />
                         <Text variant="bodyMedium" style={{ flex: 1 }}>{cue}</Text>
                       </View>
                     ))}
@@ -1485,7 +1684,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     {exercise?.tips && (
                       <>
                         <Divider style={{ marginVertical: 16 }} />
-                        <Text variant="titleSmall" style={{ marginBottom: 8 }}>💡 Pro Tips:</Text>
+                        <Text variant="titleSmall" style={{ marginBottom: 8 }}>Pro Tips:</Text>
                         <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
                           {exercise.tips}
                         </Text>
@@ -1564,7 +1763,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
             completeWorkout();
           }}
         >
-          <Dialog.Title>🏃 Cardio Finisher</Dialog.Title>
+          <Dialog.Title>Cardio Finisher</Dialog.Title>
           <Dialog.Content>
             {cardioFinisher && (
               <View>
@@ -1615,7 +1814,36 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 completeWorkout();
               }}
             >
-              ✅ Completed!
+              Completed!
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Cancel Workout Confirmation Dialog */}
+      <Portal>
+        <Dialog visible={showCancelDialog} onDismiss={() => setShowCancelDialog(false)}>
+          <Dialog.Title>Cancel Workout?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to cancel this workout? All progress will be lost.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowCancelDialog(false)}>Keep Going</Button>
+            <Button
+              textColor={theme.colors.error}
+              onPress={() => {
+                setShowCancelDialog(false);
+                workoutCompletedRef.current = true;
+                clearPausedWorkout();
+                // Reset state so beforeRemove doesn't save
+                setExercises([]);
+                setIsNaming(true);
+                navigation.navigate('Home');
+              }}
+            >
+              Cancel Workout
             </Button>
           </Dialog.Actions>
         </Dialog>
@@ -1721,7 +1949,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(100,130,153,0.25)',
+    borderBottomColor: 'transparent',
   },
   setRow: {
     flexDirection: 'row',
@@ -1739,10 +1967,6 @@ const styles = StyleSheet.create({
   },
   repsCell: {
     flex: 1,
-  },
-  rirCell: {
-    width: 40,
-    fontWeight: '600',
   },
   deleteCell: {
     width: 40,
@@ -1782,7 +2006,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(100,130,153,0.2)',
+    borderTopColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1793,7 +2017,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(0,212,255,0.05)',
+    backgroundColor: 'transparent',
     borderRadius: 8,
   },
   perfItem: {
@@ -1809,7 +2033,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tipsBox: {
-    backgroundColor: 'rgba(0, 212, 255, 0.08)',
+    backgroundColor: 'transparent',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -1837,7 +2061,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     minHeight: 48,
     elevation: 4,
-    shadowColor: '#1B2838',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -1852,7 +2076,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     marginRight: 8,
-    backgroundColor: 'rgba(100,130,153,0.2)',
+    backgroundColor: 'transparent',
   },
 });
 

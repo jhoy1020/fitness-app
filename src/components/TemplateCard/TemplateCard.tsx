@@ -4,6 +4,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, useTheme, Chip, Button } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { WorkoutTemplate, TemplateExercise, Exercise } from '../../types';
 import { formatDate } from '../../utils';
 
@@ -43,13 +44,13 @@ export function TemplateCard({
           </View>
           <View style={styles.actions}>
             {onEdit && (
-              <TouchableOpacity onPress={onEdit} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 16 }}>✏️</Text>
+              <TouchableOpacity onPress={onEdit} style={{ padding: 8 }} testID="edit-button">
+                <MaterialCommunityIcons name="pencil" size={16} color={theme.colors.onSurface} />
               </TouchableOpacity>
             )}
             {onDelete && (
-              <TouchableOpacity onPress={onDelete} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 16 }}>🗑</Text>
+              <TouchableOpacity onPress={onDelete} style={{ padding: 8 }} testID="delete-button">
+                <MaterialCommunityIcons name="delete" size={16} color={theme.colors.error} />
               </TouchableOpacity>
             )}
           </View>
@@ -89,8 +90,9 @@ export function TemplateCard({
             <Button
               mode="contained"
               onPress={onStart}
+              icon="play"
             >
-              ▶ Start Workout
+              Start Workout
             </Button>
           </View>
         )}

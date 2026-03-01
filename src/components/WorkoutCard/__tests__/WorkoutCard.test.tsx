@@ -144,14 +144,14 @@ describe('WorkoutCard', () => {
       const onEdit = jest.fn();
       render(<WorkoutCard workout={mockWorkout} onEdit={onEdit} />, { wrapper });
       
-      expect(screen.getByText('✏️')).toBeTruthy();
+      expect(screen.getByTestId('edit-button')).toBeTruthy();
     });
 
     it('calls onEdit when edit button pressed', () => {
       const onEdit = jest.fn();
       render(<WorkoutCard workout={mockWorkout} onEdit={onEdit} />, { wrapper });
       
-      fireEvent.press(screen.getByText('✏️'));
+      fireEvent.press(screen.getByTestId('edit-button'));
       expect(onEdit).toHaveBeenCalledTimes(1);
     });
 
@@ -159,14 +159,14 @@ describe('WorkoutCard', () => {
       const onDelete = jest.fn();
       render(<WorkoutCard workout={mockWorkout} onDelete={onDelete} />, { wrapper });
       
-      expect(screen.getByText('✕')).toBeTruthy();
+      expect(screen.getByTestId('delete-button')).toBeTruthy();
     });
 
     it('calls onDelete when delete button pressed', () => {
       const onDelete = jest.fn();
       render(<WorkoutCard workout={mockWorkout} onDelete={onDelete} />, { wrapper });
       
-      fireEvent.press(screen.getByText('✕'));
+      fireEvent.press(screen.getByTestId('delete-button'));
       expect(onDelete).toHaveBeenCalledTimes(1);
     });
   });

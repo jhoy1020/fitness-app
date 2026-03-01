@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, LayoutChangeEvent } from 'react-native';
 import { Text, useTheme, Surface } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { BodyMeasurement } from '../../types';
 
 interface WeightGraphProps {
@@ -9,108 +10,121 @@ interface WeightGraphProps {
   showBodyFat?: boolean;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const Y_LABEL_WIDTH = 40;
+const GRAPH_PADDING_TOP = 8;
+const GRAPH_PADDING_BOTTOM = 8;
+const DOT_SIZE = 8;
+const BF_DOT_SIZE = 6;
 
-export const WeightGraph: React.FC<WeightGraphProps> = ({ 
-  data, 
+export const WeightGraph: React.FC<WeightGraphProps> = ({
+  data,
   height = 200,
   showBodyFat = false,
 }) => {
   const theme = useTheme();
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0) setMeasuredWidth(w);
+  };
 
   const chartData = useMemo(() => {
-    if (data.length === 0) return null;
-
-    // Filter entries with weight
     const validData = data.filter(d => d.weight !== undefined);
     if (validData.length === 0) return null;
 
-    // Get min/max for scaling
     const weights = validData.map(d => d.weight!);
-    const minWeight = Math.min(...weights);
-    const maxWeight = Math.max(...weights);
-    const range = maxWeight - minWeight || 10; // Prevent division by zero
-    const padding = range * 0.1;
+    const minW = Math.min(...weights);
+    const maxW = Math.max(...weights);
+    const range = maxW - minW || 10;
+    // Add 10% padding above and below so dots aren't clipped at edges
+    const scaleMin = minW - range * 0.1;
+    const scaleMax = maxW + range * 0.1;
+    const scaleRange = scaleMax - scaleMin;
 
-    // Calculate points for the graph
-    const graphWidth = SCREEN_WIDTH - 80; // Account for padding
-    const graphHeight = height - 60; // Account for labels
+    // graphWidth = surface inner width (measuredWidth − 2*16 padding) − y-axis label width
+    const surfacePad = 32; // 16 each side
+    const graphWidth = Math.max(measuredWidth - surfacePad - Y_LABEL_WIDTH, 50);
+    const graphHeight = height - 40; // room for x-labels below
 
-    const points = validData.map((entry, index) => {
-      const x = validData.length > 1 
-        ? (index / (validData.length - 1)) * graphWidth 
+    const points = validData.map((entry, i) => {
+      const x = validData.length > 1
+        ? (i / (validData.length - 1)) * graphWidth
         : graphWidth / 2;
-      const y = graphHeight - ((entry.weight! - minWeight + padding) / (range + padding * 2)) * graphHeight;
+      // y: 0 = top of graph area, graphHeight = bottom
+      const y = GRAPH_PADDING_TOP +
+        (1 - (entry.weight! - scaleMin) / scaleRange) *
+        (graphHeight - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM);
       return { x, y, date: entry.date, weight: entry.weight!, bodyFat: entry.bodyFatPercent };
     });
 
-    // Calculate body fat points if requested
-    const bodyFatData = validData.filter(d => d.bodyFatPercent !== undefined);
-    let bodyFatPoints: { x: number; y: number; value: number }[] = [];
-    
-    if (showBodyFat && bodyFatData.length > 0) {
-      const bfValues = bodyFatData.map(d => d.bodyFatPercent!);
-      const minBF = Math.min(...bfValues);
-      const maxBF = Math.max(...bfValues);
-      const bfRange = maxBF - minBF || 5;
-      const bfPadding = bfRange * 0.1;
+    // Body fat points (separate scale)
+    const bfData = validData.filter(d => d.bodyFatPercent !== undefined);
+    let bfPoints: { x: number; y: number; value: number }[] = [];
+    if (showBodyFat && bfData.length > 0) {
+      const bfVals = bfData.map(d => d.bodyFatPercent!);
+      const bfMin = Math.min(...bfVals);
+      const bfMax = Math.max(...bfVals);
+      const bfRange = bfMax - bfMin || 5;
+      const bfScaleMin = bfMin - bfRange * 0.1;
+      const bfScaleMax = bfMax + bfRange * 0.1;
+      const bfScaleRange = bfScaleMax - bfScaleMin;
 
-      bodyFatPoints = bodyFatData.map((entry, index) => {
-        const originalIndex = validData.findIndex(d => d.id === entry.id);
-        const x = validData.length > 1 
-          ? (originalIndex / (validData.length - 1)) * graphWidth 
+      bfPoints = bfData.map(entry => {
+        const origIdx = validData.findIndex(d => d.id === entry.id);
+        const x = validData.length > 1
+          ? (origIdx / (validData.length - 1)) * graphWidth
           : graphWidth / 2;
-        const y = graphHeight - ((entry.bodyFatPercent! - minBF + bfPadding) / (bfRange + bfPadding * 2)) * graphHeight;
+        const y = GRAPH_PADDING_TOP +
+          (1 - (entry.bodyFatPercent! - bfScaleMin) / bfScaleRange) *
+          (graphHeight - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM);
         return { x, y, value: entry.bodyFatPercent! };
       });
     }
 
-    // Create path for the line
-    let path = '';
-    points.forEach((point, index) => {
-      if (index === 0) {
-        path += `M ${point.x} ${point.y}`;
-      } else {
-        path += ` L ${point.x} ${point.y}`;
-      }
-    });
+    // SVG path for weight line
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+    // area fill
+    const areaPath = linePath +
+      ` L ${points[points.length - 1].x} ${graphHeight}` +
+      ` L ${points[0].x} ${graphHeight} Z`;
 
-    // Create area fill path
-    let areaPath = path;
-    if (points.length > 0) {
-      areaPath += ` L ${points[points.length - 1].x} ${graphHeight}`;
-      areaPath += ` L ${points[0].x} ${graphHeight} Z`;
-    }
-
-    // Calculate weekly change
+    // Weekly change
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const recentData = validData.filter(d => new Date(d.date) >= weekAgo);
-    let weeklyChange = null;
-    if (recentData.length >= 2) {
-      const oldestRecent = recentData[0].weight!;
-      const latestRecent = recentData[recentData.length - 1].weight!;
-      weeklyChange = latestRecent - oldestRecent;
+    const recent = validData.filter(d => new Date(d.date) >= weekAgo);
+    let weeklyChange: number | null = null;
+    if (recent.length >= 2) {
+      weeklyChange = recent[recent.length - 1].weight! - recent[0].weight!;
     }
 
+    // Y-axis: 3 nice labels at top, middle, bottom of actual plotted area
+    const yTopVal = scaleMax;
+    const yMidVal = (scaleMax + scaleMin) / 2;
+    const yBotVal = scaleMin;
+    // corresponding y pixel positions (for alignment)
+    const yTopPx = GRAPH_PADDING_TOP;
+    const yMidPx = GRAPH_PADDING_TOP + (graphHeight - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM) / 2;
+    const yBotPx = graphHeight - GRAPH_PADDING_BOTTOM;
+
     return {
-      points,
-      bodyFatPoints,
-      path,
-      areaPath,
-      minWeight: minWeight - padding,
-      maxWeight: maxWeight + padding,
+      points, bfPoints, linePath, areaPath,
+      graphWidth, graphHeight,
       latest: validData[validData.length - 1],
       weeklyChange,
-      graphWidth,
-      graphHeight,
+      yLabels: [
+        { text: yTopVal.toFixed(0), y: yTopPx },
+        { text: yMidVal.toFixed(0), y: yMidPx },
+        { text: yBotVal.toFixed(0), y: yBotPx },
+      ],
     };
-  }, [data, height, showBodyFat]);
+  }, [data, height, showBodyFat, measuredWidth]);
 
+  // Empty state
   if (!chartData || chartData.points.length === 0) {
     return (
       <Surface style={{ justifyContent: 'center', alignItems: 'center', borderRadius: 12, padding: 24, height }} elevation={1}>
-        <Text style={{ fontSize: 48 }}>📊</Text>
+        <MaterialCommunityIcons name="chart-line" size={48} color={theme.colors.onSurfaceVariant} />
         <Text variant="bodyLarge" style={{ marginTop: 8 }}>No weight data yet</Text>
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           Add your first weight entry to see your progress
@@ -119,241 +133,169 @@ export const WeightGraph: React.FC<WeightGraphProps> = ({
     );
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const fmtDate = (s: string) => {
+    const d = new Date(s);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const styles = StyleSheet.create({
-    container: {
-      padding: 16,
-      borderRadius: 12,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 16,
-    },
-    currentWeight: {
-      alignItems: 'flex-start',
-    },
-    weightLabel: {
-      color: theme.colors.onSurfaceVariant,
-    },
-    weightValue: {
-      fontWeight: 'bold',
-      color: theme.colors.onSurface,
-    },
-    change: {
-      alignItems: 'flex-end',
-    },
-    changeValue: {
-      fontWeight: '600',
-    },
-    graphContainer: {
-      height: chartData.graphHeight,
-      marginLeft: 35,
-    },
-    yAxisLabels: {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      height: chartData.graphHeight,
-      justifyContent: 'space-between',
-      width: 30,
-    },
-    yLabel: {
-      fontSize: 10,
-      color: theme.colors.onSurfaceVariant,
-      textAlign: 'right',
-    },
-    xAxisLabels: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginTop: 8,
-      marginLeft: 35,
-    },
-    xLabel: {
-      fontSize: 10,
-      color: theme.colors.onSurfaceVariant,
-    },
-    dot: {
-      position: 'absolute',
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.colors.primary,
-      borderWidth: 2,
-      borderColor: theme.colors.surface,
-    },
-    bodyFatDot: {
-      position: 'absolute',
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.colors.tertiary,
-    },
-    emptyContainer: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 12,
-      padding: 24,
-    },
-    legend: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 16,
-      marginTop: 12,
-    },
-    legendItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    legendDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-  });
+  const { points, bfPoints, linePath, areaPath, graphWidth, graphHeight, latest, weeklyChange, yLabels } = chartData;
 
-  // Generate y-axis labels
-  const yLabels = [
-    chartData.maxWeight.toFixed(0),
-    ((chartData.maxWeight + chartData.minWeight) / 2).toFixed(0),
-    chartData.minWeight.toFixed(0),
-  ];
+  // X-axis: first & last date
+  const xLabels = points.length > 1
+    ? [fmtDate(points[0].date), fmtDate(points[points.length - 1].date)]
+    : [fmtDate(points[0].date)];
 
-  // Generate x-axis labels (first and last)
-  const xLabels = chartData.points.length > 1 ? [
-    formatDate(chartData.points[0].date),
-    formatDate(chartData.points[chartData.points.length - 1].date),
-  ] : [formatDate(chartData.points[0].date)];
+  const bfLinePath = bfPoints.length > 1
+    ? bfPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+    : '';
 
   return (
-    <Surface style={styles.container} elevation={1}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.currentWeight}>
-          <Text variant="labelSmall" style={styles.weightLabel}>Current Weight</Text>
-          <Text variant="headlineMedium" style={styles.weightValue}>
-            {chartData.latest.weight} lbs
-          </Text>
-          {chartData.latest.bodyFatPercent && (
-            <Text variant="labelMedium" style={{ color: theme.colors.tertiary }}>
-              {chartData.latest.bodyFatPercent}% body fat
+    <Surface style={{ padding: 16, borderRadius: 12 }} elevation={1} onLayout={onLayout}>
+      {/* ── Header ── */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>Current Weight</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <Text variant="titleLarge" style={{ fontWeight: 'bold' }}>
+              {latest.weight} lbs
             </Text>
-          )}
+            {latest.bodyFatPercent != null && (
+              <Text variant="bodySmall" style={{ color: theme.colors.tertiary }}>
+                {latest.bodyFatPercent}% BF
+              </Text>
+            )}
+          </View>
         </View>
-        {chartData.weeklyChange !== null && (
-          <View style={styles.change}>
-            <Text variant="labelSmall" style={styles.weightLabel}>This Week</Text>
-            <Text 
-              variant="titleMedium" 
-              style={[
-                styles.changeValue,
-                { 
-                  color: chartData.weeklyChange < 0 
-                    ? theme.colors.tertiary 
-                    : chartData.weeklyChange > 0 
-                      ? theme.colors.error 
-                      : theme.colors.onSurface 
-                }
-              ]}
+        {weeklyChange !== null && (
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>This Week</Text>
+            <Text
+              variant="titleMedium"
+              style={{
+                fontWeight: '600',
+                color: weeklyChange < 0
+                  ? theme.colors.tertiary
+                  : weeklyChange > 0
+                    ? theme.colors.error
+                    : theme.colors.onSurface,
+              }}
             >
-              {chartData.weeklyChange > 0 ? '+' : ''}{chartData.weeklyChange.toFixed(1)} lbs
+              {weeklyChange > 0 ? '+' : ''}{weeklyChange.toFixed(1)} lbs
             </Text>
           </View>
         )}
       </View>
 
-      {/* Y-axis labels */}
-      <View style={styles.yAxisLabels}>
-        {yLabels.map((label, i) => (
-          <Text key={i} style={styles.yLabel}>{label}</Text>
-        ))}
-      </View>
+      {/* ── Chart area (y-labels + graph side by side) ── */}
+      <View style={{ flexDirection: 'row', height: graphHeight }}>
+        {/* Y-axis labels — absolutely position each label at its pixel y */}
+        <View style={{ width: Y_LABEL_WIDTH, position: 'relative' }}>
+          {yLabels.map((lbl, i) => (
+            <Text
+              key={i}
+              style={{
+                position: 'absolute',
+                right: 4,
+                top: lbl.y - 6, // center the ~12px text on the y position
+                fontSize: 10,
+                color: theme.colors.onSurfaceVariant,
+              }}
+            >
+              {lbl.text}
+            </Text>
+          ))}
+        </View>
 
-      {/* Graph area */}
-      <View style={styles.graphContainer}>
-        {/* SVG-like line using absolute positioning */}
-        <svg 
-          width={chartData.graphWidth} 
-          height={chartData.graphHeight}
-          style={{ position: 'absolute', left: 0, top: 0 }}
-        >
-          {/* Gradient area fill */}
-          <defs>
-            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={theme.colors.primary} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={theme.colors.primary} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d={chartData.areaPath} fill="url(#areaGradient)" />
-          <path 
-            d={chartData.path} 
-            fill="none" 
-            stroke={theme.colors.primary} 
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          
-          {/* Body fat line if enabled */}
-          {showBodyFat && chartData.bodyFatPoints.length > 1 && (
-            <path 
-              d={chartData.bodyFatPoints.map((p, i) => 
-                `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-              ).join(' ')}
-              fill="none"
-              stroke={theme.colors.tertiary}
-              strokeWidth="2"
-              strokeDasharray="4,4"
-              strokeLinecap="round"
+        {/* Graph plot */}
+        <View style={{ flex: 1, height: graphHeight, overflow: 'hidden' }}>
+          {/* Grid lines */}
+          {yLabels.map((lbl, i) => (
+            <View
+              key={`grid-${i}`}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: lbl.y,
+                height: 1,
+                backgroundColor: theme.colors.outlineVariant,
+                opacity: 0.4,
+              }}
             />
-          )}
-        </svg>
+          ))}
 
-        {/* Data points */}
-        {chartData.points.map((point, i) => (
-          <View 
-            key={i}
-            style={[
-              styles.dot,
-              { left: point.x - 4, top: point.y - 4 }
-            ]}
-          />
-        ))}
-        
-        {/* Body fat points */}
-        {showBodyFat && chartData.bodyFatPoints.map((point, i) => (
-          <View 
-            key={`bf-${i}`}
-            style={[
-              styles.bodyFatDot,
-              { left: point.x - 3, top: point.y - 3, backgroundColor: theme.colors.tertiary }
-            ]}
-          />
+          {/* SVG lines */}
+          <svg
+            width={graphWidth}
+            height={graphHeight}
+            viewBox={`0 0 ${graphWidth} ${graphHeight}`}
+            style={{ position: 'absolute', left: 0, top: 0 }}
+          >
+            <defs>
+              <linearGradient id="weightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor={theme.colors.primary} stopOpacity="0.25" />
+                <stop offset="100%" stopColor={theme.colors.primary} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={areaPath} fill="url(#weightGrad)" />
+            <path d={linePath} fill="none" stroke={theme.colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {bfLinePath ? (
+              <path d={bfLinePath} fill="none" stroke={theme.colors.tertiary} strokeWidth="2" strokeDasharray="4,4" strokeLinecap="round" />
+            ) : null}
+          </svg>
+
+          {/* Weight dots */}
+          {points.map((p, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: p.x - DOT_SIZE / 2,
+                top: p.y - DOT_SIZE / 2,
+                width: DOT_SIZE,
+                height: DOT_SIZE,
+                borderRadius: DOT_SIZE / 2,
+                backgroundColor: theme.colors.primary,
+                borderWidth: 2,
+                borderColor: theme.colors.surface,
+              }}
+            />
+          ))}
+
+          {/* Body fat dots */}
+          {showBodyFat && bfPoints.map((p, i) => (
+            <View
+              key={`bf-${i}`}
+              style={{
+                position: 'absolute',
+                left: p.x - BF_DOT_SIZE / 2,
+                top: p.y - BF_DOT_SIZE / 2,
+                width: BF_DOT_SIZE,
+                height: BF_DOT_SIZE,
+                borderRadius: BF_DOT_SIZE / 2,
+                backgroundColor: theme.colors.tertiary,
+              }}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* ── X-axis labels ── */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginLeft: Y_LABEL_WIDTH }}>
+        {xLabels.map((lbl, i) => (
+          <Text key={i} style={{ fontSize: 10, color: theme.colors.onSurfaceVariant }}>{lbl}</Text>
         ))}
       </View>
 
-      {/* X-axis labels */}
-      <View style={styles.xAxisLabels}>
-        {xLabels.map((label, i) => (
-          <Text key={i} style={styles.xLabel}>{label}</Text>
-        ))}
-      </View>
-
-      {/* Legend */}
-      {showBodyFat && chartData.bodyFatPoints.length > 0 && (
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.colors.primary }]} />
+      {/* ── Legend ── */}
+      {showBodyFat && bfPoints.length > 0 && (
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.primary }} />
             <Text variant="labelSmall">Weight</Text>
           </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.colors.tertiary }]} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.tertiary }} />
             <Text variant="labelSmall">Body Fat %</Text>
           </View>
         </View>
