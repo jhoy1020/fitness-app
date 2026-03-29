@@ -1,7 +1,8 @@
 // Utility functions and formulas
 
 import { ACTIVITY_MULTIPLIERS, MACROS, CONVERSIONS, PROGRESSION } from '../constants/constants';
-import type { ActivityLevel, UserProfile, NutritionCalculation, WorkoutSet, ProgressiveOverloadSuggestion } from '../../types';
+import type { ActivityLevel, UserProfile, NutritionCalculation, WorkoutSet, ProgressiveOverloadSuggestion, ProgramWeekTemplate } from '../../types';
+import type { PlateConfig, WarmupSet } from '../plateCalculator/plateCalculator';
 
 /**
  * Generate a UUID v4
@@ -310,4 +311,132 @@ export function calculateWeeksToGoal(
 ): number {
   if (current1RM >= target1RM) return 0;
   return Math.ceil((target1RM - current1RM) / weeklyIncrement);
+}
+
+/**
+ * Resolve the correct week template for a given week index.
+ * Supports both single-week programs (weekTemplate) and multi-week programs (weekTemplates).
+ * When weekTemplates is set, it takes precedence over weekTemplate.
+ * Weeks beyond the defined templates cycle back (e.g., week 4 with 3 templates uses template 1).
+ * 
+ * @param weekTemplate - Single week template (same every week)
+ * @param weekTemplates - Array of per-week templates (vary by week)
+ * @param weekIndex - 0-based week index
+ * @returns The resolved ProgramWeekTemplate, or null if no template available
+ */
+export function getWeekTemplate(
+  weekTemplate?: ProgramWeekTemplate,
+  weekTemplates?: ProgramWeekTemplate[],
+  weekIndex: number = 0
+): ProgramWeekTemplate | null {
+  // weekTemplates takes precedence when available
+  if (weekTemplates && weekTemplates.length > 0) {
+    return weekTemplates[weekIndex % weekTemplates.length];
+  }
+  // Fall back to single weekTemplate
+  if (weekTemplate) {
+    return weekTemplate;
+  }
+  return null;
+}
+
+// ─── 1RM Test Day Protocol ──────────────────────────────
+
+export interface AttemptSet {
+  label: string;
+  weight: number;
+  percentage: number; // % of current 1RM
+  rpe: number;
+  restSeconds: number;
+  plates: PlateConfig;
+  result?: 'hit' | 'miss';
+}
+
+export interface OneRMTestProtocol {
+  exerciseName: string;
+  current1RM: number;
+  goal1RM: number;
+  unit: 'lbs' | 'kg';
+  warmupSets: WarmupSet[];
+  attempts: AttemptSet[];
+}
+
+/**
+ * Round a weight to the nearest increment (5 lbs or 2.5 kg)
+ */
+function roundWeight(weight: number, isMetric: boolean): number {
+  const increment = isMetric ? 2.5 : 5;
+  return Math.round(weight / increment) * increment;
+}
+
+/**
+ * Generate a 1RM test-day protocol.
+ *
+ * Protocol (powerlifting-style 3-attempt system):
+ *   Warmup  → progressive sets building to ~80 % of opener
+ *   Attempt 1 (Opener)  → ~90 % of current 1RM  (RPE ~8)
+ *   Attempt 2           → midpoint between opener and goal (~95-100 %)  (RPE ~9)
+ *   Attempt 3 (Goal)    → goal 1RM  (RPE 10)
+ *
+ * @param exerciseName  Display name of the exercise
+ * @param current1RM    Athlete's current / most-recent tested or estimated 1RM
+ * @param goal1RM       Target weight for the test session
+ * @param barWeight     Bar weight in the same unit (default: 45 lbs / 20 kg)
+ * @param isMetric      Whether weights are in kg
+ */
+export function generate1RMTestProtocol(
+  exerciseName: string,
+  current1RM: number,
+  goal1RM: number,
+  barWeight?: number,
+  isMetric: boolean = false,
+): OneRMTestProtocol {
+  const { getWarmupSets, calculatePlates } = require('../plateCalculator/plateCalculator');
+
+  const defaultBar = isMetric ? 20 : 45;
+  const bar = barWeight ?? defaultBar;
+
+  // Attempt weights
+  const openerWeight = roundWeight(current1RM * 0.9, isMetric);
+  const secondWeight = roundWeight((openerWeight + goal1RM) / 2, isMetric);
+  const thirdWeight = roundWeight(goal1RM, isMetric);
+
+  // Warm-up sets target the opener as the "working weight"
+  const warmupSets = getWarmupSets(openerWeight, bar, isMetric);
+
+  const attempts: AttemptSet[] = [
+    {
+      label: 'Opener',
+      weight: openerWeight,
+      percentage: Math.round((openerWeight / current1RM) * 100),
+      rpe: 8,
+      restSeconds: 180, // 3 min
+      plates: calculatePlates(openerWeight, bar, isMetric),
+    },
+    {
+      label: '2nd Attempt',
+      weight: secondWeight,
+      percentage: Math.round((secondWeight / current1RM) * 100),
+      rpe: 9,
+      restSeconds: 300, // 5 min
+      plates: calculatePlates(secondWeight, bar, isMetric),
+    },
+    {
+      label: '3rd Attempt – Goal',
+      weight: thirdWeight,
+      percentage: Math.round((thirdWeight / current1RM) * 100),
+      rpe: 10,
+      restSeconds: 0, // last attempt, no rest needed after
+      plates: calculatePlates(thirdWeight, bar, isMetric),
+    },
+  ];
+
+  return {
+    exerciseName,
+    current1RM,
+    goal1RM,
+    unit: isMetric ? 'kg' : 'lbs',
+    warmupSets,
+    attempts,
+  };
 }

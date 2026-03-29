@@ -21,4 +21,28 @@ describe('ProgressScreen', () => {
       expect(ProgressScreen).toBeDefined();
     });
   });
+
+  describe('1RM Test Day integration', () => {
+    it('source file contains Test Your 1RM card', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const source = fs.readFileSync(
+        path.resolve(__dirname, '../ProgressScreen.tsx'),
+        'utf-8',
+      );
+      expect(source).toContain('Test Your 1RM');
+      expect(source).toContain('Start 1RM Test');
+      expect(source).toContain("navigation.navigate('OneRepMaxTest')");
+    });
+
+    it('source imports the trophy icon for the button', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const source = fs.readFileSync(
+        path.resolve(__dirname, '../ProgressScreen.tsx'),
+        'utf-8',
+      );
+      expect(source).toContain('AppIcons.pr');
+    });
+  });
 });

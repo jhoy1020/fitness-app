@@ -326,7 +326,10 @@
 <a name='L261'></a><a href='#L261'>261</a>
 <a name='L262'></a><a href='#L262'>262</a>
 <a name='L263'></a><a href='#L263'>263</a>
-<a name='L264'></a><a href='#L264'>264</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -336,7 +339,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -517,6 +522,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">82x</span>
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">16x</span>
@@ -550,9 +558,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -595,21 +601,23 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, useTheme, Chip } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { Workout, WorkoutSet, Exercise, CardioType } from '../../types';
 import { formatDate, formatDuration } from '../../utils';
+import { withAlpha, statusColors } from '../../theme';
 &nbsp;
 // Cardio type display mapping
-const CARDIO_DISPLAY: Record&lt;CardioType, { label: string; emoji: string }&gt; = {
-  running: { label: 'Running', emoji: '🏃' },
-  cycling: { label: 'Cycling', emoji: '🚴' },
-  walking: { label: 'Walking', emoji: '🚶' },
-  swimming: { label: 'Swimming', emoji: '🏊' },
-  rowing: { label: 'Rowing', emoji: '🚣' },
-  elliptical: { label: 'Elliptical', emoji: '🏋️' },
-  stair_climber: { label: 'Stair Climber', emoji: '🪜' },
-  hiit: { label: 'HIIT', emoji: '⚡' },
-  jump_rope: { label: 'Jump Rope', emoji: '🪢' },
-  other: { label: 'Cardio', emoji: '❤️' },
+const CARDIO_DISPLAY: Record&lt;CardioType, { label: string; icon: string }&gt; = {
+  running: { label: 'Running', icon: 'run' },
+  cycling: { label: 'Cycling', icon: 'bike' },
+  walking: { label: 'Walking', icon: 'walk' },
+  swimming: { label: 'Swimming', icon: 'swim' },
+  rowing: { label: 'Rowing', icon: 'rowing' },
+  elliptical: { label: 'Elliptical', icon: 'dumbbell' },
+  stair_climber: { label: 'Stair Climber', icon: 'stairs' },
+  hiit: { label: 'HIIT', icon: 'lightning-bolt' },
+  jump_rope: { label: 'Jump Rope', icon: 'jump-rope' },
+  other: { label: 'Cardio', icon: 'heart-pulse' },
 };
 &nbsp;
 interface WorkoutCardProps {
@@ -654,7 +662,7 @@ export function WorkoutCard({
   const renderCardioStats = <span class="fstat-no" title="function not covered" >()</span> =&gt; {
     const cardioInfo = <span class="cstat-no" title="statement not covered" >CARDIO_DISPLAY[workout.cardioType!];</span>
 <span class="cstat-no" title="statement not covered" >    return (</span>
-      &lt;View style={styles.stats}&gt;
+      &lt;View style={[styles.stats, { borderColor: theme.colors.outlineVariant }]}&gt;
         {workout.durationMinutes &amp;&amp; (
           &lt;View style={styles.stat}&gt;
             &lt;Text variant="titleLarge" style={{ color: theme.colors.primary }}&gt;
@@ -701,7 +709,7 @@ export function WorkoutCard({
 &nbsp;
   // Render strength workout stats
   const renderStrengthStats = () =&gt; (
-    &lt;View style={styles.stats}&gt;
+    &lt;View style={[styles.stats, { borderColor: theme.colors.outlineVariant }]}&gt;
       &lt;View style={styles.stat}&gt;
         &lt;Text variant="titleLarge" style={{ color: theme.colors.primary }}&gt;
           {workingSets.length}
@@ -741,7 +749,7 @@ export function WorkoutCard({
                   style={{ backgroundColor: theme.colors.tertiaryContainer }}
                   textStyle={{ fontSize: 10 }}
                 &gt;
-                  {CARDIO_DISPLAY[workout.cardioType!].emoji}
+                  &lt;MaterialCommunityIcons name={CARDIO_DISPLAY[workout.cardioType!].icon as any} size={14} color={theme.colors.onTertiaryContainer} /&gt;
                 &lt;/Chip&gt;
               )}
               &lt;Text variant="titleMedium"&gt;{workout.name}&lt;/Text&gt;
@@ -753,13 +761,13 @@ export function WorkoutCard({
           &lt;/View&gt;
           &lt;View style={styles.actions}&gt;
             {onEdit &amp;&amp; (
-              &lt;TouchableOpacity onPress={onEdit} style={{ padding: 8 }}&gt;
-                &lt;Text style={{ fontSize: 18 }}&gt;✏️&lt;/Text&gt;
+              &lt;TouchableOpacity onPress={onEdit} style={{ padding: 8 }} testID="edit-button"&gt;
+                &lt;MaterialCommunityIcons name="pencil" size={18} color={theme.colors.onSurfaceVariant} /&gt;
               &lt;/TouchableOpacity&gt;
             )}
             {onDelete &amp;&amp; (
-              &lt;TouchableOpacity onPress={onDelete} style={{ padding: 8 }}&gt;
-                &lt;Text style={{ fontSize: 18, color: '#FF4444', fontWeight: 'bold' }}&gt;✕&lt;/Text&gt;
+              &lt;TouchableOpacity onPress={onDelete} style={{ padding: 8 }} testID="delete-button"&gt;
+                &lt;MaterialCommunityIcons name="close" size={18} color={theme.colors.error} /&gt;
               &lt;/TouchableOpacity&gt;
             )}
           &lt;/View&gt;
@@ -770,9 +778,12 @@ export function WorkoutCard({
         {/* Show cardio details for cardio workouts */}
         {isCardio &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >workout.avgHeartRate </span>&amp;&amp; (
 <span class="branch-2 cbranch-no" title="branch not covered" >          &lt;View style={styles.exerciseList}&gt;</span>
-            &lt;Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}&gt;
-              ❤️ Avg HR: {workout.avgHeartRate} bpm
-            &lt;/Text&gt;
+            &lt;View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}&gt;
+              &lt;MaterialCommunityIcons name="heart-pulse" size={14} color={theme.colors.error} /&gt;
+              &lt;Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}&gt;
+                Avg HR: {workout.avgHeartRate} bpm
+              &lt;/Text&gt;
+            &lt;/View&gt;
           &lt;/View&gt;
         )}
 &nbsp;
@@ -802,7 +813,7 @@ export function WorkoutCard({
         )}
 &nbsp;
         {workout.notes &amp;&amp; (
-          &lt;View style={styles.notes}&gt;
+          &lt;View style={[styles.notes, { borderColor: theme.colors.outlineVariant }]}&gt;
             &lt;Text variant="bodySmall" style={{ color: theme.colors.outline, fontStyle: 'italic' }}&gt;
               {workout.notes}
             &lt;/Text&gt;
@@ -834,7 +845,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#e0e0e0',
   },
   stat: {
     alignItems: 'center',
@@ -847,7 +857,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderColor: '#e0e0e0',
   },
 });
 &nbsp;
@@ -859,7 +868,7 @@ export default WorkoutCard;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-22T22:57:17.918Z
+                at 2026-03-27T02:45:49.651Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

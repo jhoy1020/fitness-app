@@ -30,9 +30,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
+                <span class="strong">88.23% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>28/32</span>
+                <span class='fraction'>30/34</span>
             </div>
         
             
@@ -264,7 +264,11 @@
 <a name='L199'></a><a href='#L199'>199</a>
 <a name='L200'></a><a href='#L200'>200</a>
 <a name='L201'></a><a href='#L201'>201</a>
-<a name='L202'></a><a href='#L202'>202</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -311,6 +315,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">14x</span>
 <span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -412,7 +418,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -471,6 +477,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text, Surface, useTheme, Button } from 'react-native-paper';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTimer } from '../../context';
 import { formatDuration, TIMER } from '../../utils';
 &nbsp;
@@ -523,14 +530,16 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
             &lt;TouchableOpacity
               onPress={isRunning ? pauseTimer : resumeTimer}
               style={{ padding: 8 }}
+              testID={isRunning ? 'pause-button' : 'play-button'}
             &gt;
-              &lt;Text style={{ fontSize: 18 }}&gt;{isRunning ? '⏸' : '▶'}&lt;/Text&gt;
+              &lt;MaterialCommunityIcons name={isRunning ? 'pause' : 'play'} size={18} color={theme.colors.onSurfaceVariant} /&gt;
             &lt;/TouchableOpacity&gt;
             &lt;TouchableOpacity
               onPress={stopTimer}
               style={{ padding: 8 }}
+              testID="stop-button"
             &gt;
-              &lt;Text style={{ fontSize: 18 }}&gt;⏹&lt;/Text&gt;
+              &lt;MaterialCommunityIcons name="stop" size={18} color={theme.colors.onSurfaceVariant} /&gt;
             &lt;/TouchableOpacity&gt;
           &lt;/View&gt;
         &lt;/View&gt;
@@ -594,19 +603,19 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
           onPress={<span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >adjustTimer(totalTime - timeRemaining)}</span>
           style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 24 }}
         &gt;
-          &lt;Text style={{ fontSize: 20 }}&gt;🔄&lt;/Text&gt;
+          &lt;MaterialCommunityIcons name="refresh" size={20} color={theme.colors.onSurfaceVariant} /&gt;
         &lt;/TouchableOpacity&gt;
         &lt;TouchableOpacity
           onPress={isRunning ? pauseTimer : <span class="branch-1 cbranch-no" title="branch not covered" >resumeTimer}</span>
           style={{ padding: 16, backgroundColor: theme.colors.primary, borderRadius: 32, marginHorizontal: 16 }}
         &gt;
-          &lt;Text style={{ fontSize: 28, color: '#fff' }}&gt;{isRunning ? '⏸' : <span class="branch-1 cbranch-no" title="branch not covered" >'▶'}</span>&lt;/Text&gt;
+          &lt;MaterialCommunityIcons name={isRunning ? 'pause' : <span class="branch-1 cbranch-no" title="branch not covered" >'play'}</span> size={28} color={theme.colors.onPrimary} /&gt;
         &lt;/TouchableOpacity&gt;
         &lt;TouchableOpacity
           onPress={stopTimer}
           style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 24 }}
         &gt;
-          &lt;Text style={{ fontSize: 20 }}&gt;⏭&lt;/Text&gt;
+          &lt;MaterialCommunityIcons name="skip-next" size={20} color={theme.colors.onSurfaceVariant} /&gt;
         &lt;/TouchableOpacity&gt;
       &lt;/View&gt;
     &lt;/Surface&gt;
@@ -673,7 +682,7 @@ export default RestTimer;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-22T22:57:17.918Z
+                at 2026-03-27T02:45:49.651Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

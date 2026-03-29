@@ -58,6 +58,9 @@ interface WorkoutExercise {
   supersetOrder?: number;
   supersetWith?: string; // Legacy: ID of paired exercise
   isWarmupComplete?: boolean;
+  // Notes
+  notes?: string;
+  templateNotes?: string; // Read-only hint from program template
 }
 
 interface ActiveWorkoutScreenProps {
@@ -146,6 +149,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
   const [cardioFinisher, setCardioFinisher] = useState<CardioFinisher | null>(null);
   const [showCardioFinisherDialog, setShowCardioFinisherDialog] = useState(false);
   const [cardioFinisherCompleted, setCardioFinisherCompleted] = useState(false);
+
+  // Notes toggle state
+  const [notesExpandedExercises, setNotesExpandedExercises] = useState<Set<string>>(new Set());
 
   // Cancel confirmation dialog
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -282,7 +288,17 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
               // Superset data
               supersetGroupId: set.supersetGroupId,
               supersetOrder: set.supersetOrder,
+              // Notes from program template
+              templateNotes: set.notes,
             });
+            // Auto-expand notes section when template notes exist
+            if (set.notes) {
+              setNotesExpandedExercises(prev => {
+                const next = new Set(prev);
+                next.add(exerciseMap.get(set.exerciseName)!.id);
+                return next;
+              });
+            }
           }
         });
         setExercises(Array.from(exerciseMap.values()));
@@ -822,6 +838,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       exercises: exercises.map(e => ({
         exerciseId: e.id,
         exerciseName: e.name,
+        notes: e.notes || undefined,
         sets: e.sets.map(s => ({
           weight: s.weight,
           targetReps: s.reps,
@@ -1042,6 +1059,24 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   </Text>
                 </View>
                 <View style={styles.exerciseActions}>
+                  {/* Notes toggle icon */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setNotesExpandedExercises(prev => {
+                        const next = new Set(prev);
+                        if (next.has(exercise.id)) next.delete(exercise.id);
+                        else next.add(exercise.id);
+                        return next;
+                      });
+                    }}
+                    style={{ padding: 8 }}
+                  >
+                    <MaterialCommunityIcons
+                      name={exercise.notes || exercise.templateNotes ? 'note-text' : AppIcons.notes}
+                      size={16}
+                      color={exercise.notes || exercise.templateNotes ? theme.colors.primary : theme.colors.onSurfaceVariant}
+                    />
+                  </TouchableOpacity>
                   {/* Superset link button - always visible */}
                   {!exercise.supersetGroupId ? (
                     <TouchableOpacity
@@ -1185,6 +1220,37 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                     ) : null;
                   })()}
                   
+                  {/* Exercise Notes - toggle/expand */}
+                  {(notesExpandedExercises.has(exercise.id) || exercise.notes || exercise.templateNotes) && (
+                    <View style={{ marginBottom: 8 }}>
+                      {exercise.templateNotes ? (
+                        <View style={[styles.tipsBox, { backgroundColor: withAlpha(theme.colors.tertiary, 0.08), marginBottom: 4 }]}>
+                          <Text variant="labelSmall" style={{ color: theme.colors.tertiary, fontWeight: '600' }}>
+                            PROGRAM NOTE
+                          </Text>
+                          <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, fontStyle: 'italic' }}>
+                            {exercise.templateNotes}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <TextInput
+                        mode="outlined"
+                        label="Exercise notes"
+                        value={exercise.notes || ''}
+                        onChangeText={(text) => {
+                          setExercises(prev => prev.map(ex =>
+                            ex.id === exercise.id ? { ...ex, notes: text } : ex
+                          ));
+                        }}
+                        dense
+                        multiline
+                        numberOfLines={2}
+                        placeholder="e.g., 1s pause at bottom, controlled negative"
+                        style={{ marginTop: 0 }}
+                      />
+                    </View>
+                  )}
+
                   {/* Previous Sets - adapts to tracking type */}
                   {exercise.sets.length > 0 && (
                     <View style={styles.setsTable}>

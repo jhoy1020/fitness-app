@@ -9,7 +9,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useWorkout, useUser, useMesoCycle } from '../../context';
 import { WorkoutCard, ProgramCard, PausedWorkoutCard } from '../../components';
 import { getAllExercises, getSetsByWorkoutId } from '../../services/db';
-import { calculate1RM_Epley } from '../../utils/formulas/formulas';
+import { calculate1RM_Epley, getWeekTemplate } from '../../utils/formulas/formulas';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
 import { TRAINING_PROGRAMS } from '../../data/programs/programs';
 import { getRecoverySuggestions } from '../../utils/recoveryEngine/recoveryEngine';
@@ -434,22 +434,31 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const getNextProgramWorkout = useMemo(() => {
     if (!mesoState.activeMesoCycle) return null;
     
-    // First try to get weekTemplate from the mesocycle itself (for custom programs)
-    let weekTemplate = mesoState.activeMesoCycle.weekTemplate;
+    // Determine the current week (0-based index)
+    const currentWeekIndex = (mesoState.activeMesoCycle.currentWeek || 1) - 1;
+    
+    // Resolve the week template for the current week, supporting per-week variation
+    let resolved = getWeekTemplate(
+      mesoState.activeMesoCycle.weekTemplate,
+      mesoState.activeMesoCycle.weekTemplates,
+      currentWeekIndex
+    );
     
     // Fallback: try to find in TRAINING_PROGRAMS (for pre-built programs)
-    if (!weekTemplate && mesoState.activeMesoCycle.programId) {
+    if (!resolved && mesoState.activeMesoCycle.programId) {
       const program = TRAINING_PROGRAMS.find(p => p.id === mesoState.activeMesoCycle?.programId);
-      weekTemplate = program?.weekTemplate;
+      if (program) {
+        resolved = getWeekTemplate(program.weekTemplate, program.weekTemplates, currentWeekIndex);
+      }
     }
     
-    if (!weekTemplate?.days?.length) return null;
+    if (!resolved?.days?.length) return null;
     
-    // Calculate which day we're on based on completed workouts
+    // Calculate which day we're on within the current week
     const completedWorkouts = mesoState.activeMesoCycle.completedWorkouts || 0;
-    const daysInWeek = weekTemplate.days.length;
+    const daysInWeek = resolved.days.length;
     const dayIndex = completedWorkouts % daysInWeek;
-    const nextDay = weekTemplate.days[dayIndex];
+    const nextDay = resolved.days[dayIndex];
     
     if (!nextDay) return null;
     
@@ -473,6 +482,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         restSeconds: ex.restSeconds,
         supersetGroupId: ex.supersetGroupId,
         supersetOrder: ex.supersetOrder,
+        notes: ex.notes,
       })) : [],
       // For cardio days
       cardioActivities: nextDay.cardioActivities,

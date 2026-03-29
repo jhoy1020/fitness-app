@@ -207,6 +207,7 @@ export interface Workout {
   exercises?: Array<{
     exerciseId: string;
     exerciseName: string;
+    notes?: string;
     sets: Array<{
       weight: number;
       targetReps: number;
@@ -388,7 +389,9 @@ export interface MesoCycle {
   programName?: string;
   
   // Week template (workout structure from program)
+  // If weekTemplates is set, it takes precedence over weekTemplate (per-week variation)
   weekTemplate?: ProgramWeekTemplate;
+  weekTemplates?: ProgramWeekTemplate[];
   
   // Tracking
   totalWorkouts: number;
@@ -416,7 +419,10 @@ export interface TrainingProgram {
   weeklyFrequency: MuscleFrequency;
   
   // Weekly template
+  // weekTemplate: used when every week is the same
+  // weekTemplates: used when weeks vary (takes precedence over weekTemplate)
   weekTemplate: ProgramWeekTemplate;
+  weekTemplates?: ProgramWeekTemplate[];
   
   // Volume progression
   startingVolumeMultiplier: number;  // 1.0 = MEV, 1.2 = 20% above MEV
@@ -428,6 +434,7 @@ export interface TrainingProgram {
 
 // Template for a program's weekly structure
 export interface ProgramWeekTemplate {
+  weekNumber?: number;  // 1-based week number (for multi-week programs)
   days: ProgramDayTemplate[];
 }
 
@@ -663,6 +670,9 @@ export type MesoCycleAction =
   | { type: 'LOAD_MESOCYCLE_HISTORY'; payload: MesoCycle[] }
   | { type: 'LOAD_PROGRAMS'; payload: TrainingProgram[] }
   | { type: 'START_PROGRAM'; payload: { program: TrainingProgram; startDate: string } }
+  | { type: 'SAVE_CUSTOM_PROGRAM'; payload: TrainingProgram }
+  | { type: 'DELETE_CUSTOM_PROGRAM'; payload: string }
+  | { type: 'UPDATE_ACTIVE_MESOCYCLE_FROM_PROGRAM'; payload: TrainingProgram }
   | { type: 'RECORD_WORKOUT_COMPLETION'; payload: { workoutId: string; volumeByMuscle: Record<string, number> } }
   | { type: 'ADVANCE_DAY' }  // For rest/cardio/recovery days - just advance to next day
   | { type: 'UPDATE_MESOCYCLE'; payload: MesoCycle }

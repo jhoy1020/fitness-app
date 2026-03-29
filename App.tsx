@@ -26,6 +26,7 @@ import {
   MesoCycleScreen,
   CreateProgramScreen,
   WorkoutDetailScreen,
+  OneRepMaxTestScreen,
 } from './src/screens';
 
 // Navigation types
@@ -38,9 +39,10 @@ type RootStackParamList = {
   CreateTemplate: undefined;
   TemplateDetail: { templateId: string };
   Programs: undefined;
-  CreateProgram: undefined;
+  CreateProgram: { programId?: string } | undefined;
   VolumeTracker: undefined;
   MesoCycle: undefined;
+  OneRepMaxTest: { exerciseName?: string };
 };
 
 type MainTabParamList = {
@@ -272,9 +274,9 @@ function RootNavigator() {
       <Stack.Screen
         name="CreateProgram"
         component={CreateProgramScreen}
-        options={{
-          title: 'Create Program',
-        }}
+        options={({ route }) => ({
+          title: (route.params as any)?.programId ? 'Edit Program' : 'Create Program',
+        })}
       />
       <Stack.Screen
         name="VolumeTracker"
@@ -288,6 +290,13 @@ function RootNavigator() {
         component={MesoCycleScreen}
         options={{
           title: 'Training Program',
+        }}
+      />
+      <Stack.Screen
+        name="OneRepMaxTest"
+        component={OneRepMaxTestScreen}
+        options={{
+          title: '1RM Test Day',
         }}
       />
     </Stack.Navigator>

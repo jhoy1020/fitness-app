@@ -39,10 +39,12 @@ export const muscleGroupColors: Record<string, string> = {
   triceps: '#FF9800',
   forearms: '#795548',
   quads: '#4CAF50',
+  quadriceps: '#4CAF50',
   hamstrings: '#8BC34A',
   glutes: '#CDDC39',
   calves: '#009688',
   core: '#00BCD4',
+  full_body: '#3F51B5',
   other: '#607D8B',
 } as const;
 

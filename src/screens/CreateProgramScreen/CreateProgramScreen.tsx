@@ -1,6 +1,6 @@
 // Create Program Screen - Build custom workout programs
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { 
   Text, 
@@ -13,7 +13,8 @@ import {
   Portal,
   Dialog,
   Divider,
-  IconButton
+  IconButton,
+  Switch
 } from 'react-native-paper';
 import { useMesoCycle } from '../../context/MesoCycleContext';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
@@ -26,6 +27,7 @@ import { AppIcons } from '../../theme/icons';
 
 interface CreateProgramScreenProps {
   navigation: any;
+  route?: any;
 }
 
 const MUSCLE_GROUPS: MuscleGroup[] = [
@@ -61,11 +63,16 @@ interface ExerciseEntry {
   restSeconds: number;
   supersetGroupId?: string;
   supersetOrder?: number;
+  notes?: string;
 }
 
-export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
+export function CreateProgramScreen({ navigation, route }: CreateProgramScreenProps) {
   const theme = useTheme();
-  const { dispatch } = useMesoCycle();
+  const { dispatch, state: mesoState } = useMesoCycle();
+
+  // Edit mode: check for programId in route params
+  const editingProgramId = route?.params?.programId as string | undefined;
+  const isEditing = !!editingProgramId;
 
   // Program basics
   const [programName, setProgramName] = useState('');
@@ -74,8 +81,23 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
   const [durationWeeks, setDurationWeeks] = useState('5');
   const [split, setSplit] = useState('Push/Pull/Legs');
 
-  // Workout days
-  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([]);
+  // Workout days — supports per-week variation
+  const [varyByWeek, setVaryByWeek] = useState(false);
+  const [activeWeekIndex, setActiveWeekIndex] = useState(0);
+  const [weeklyWorkoutDays, setWeeklyWorkoutDays] = useState<WorkoutDay[][]>([[]]);
+
+  // Derived: current week's workout days (convenience accessor)
+  const workoutDays = weeklyWorkoutDays[activeWeekIndex] || [];
+  
+  // Helper: update the current week's days in the multi-week array
+  const setWorkoutDays = (updater: WorkoutDay[] | ((prev: WorkoutDay[]) => WorkoutDay[])) => {
+    setWeeklyWorkoutDays(prev => {
+      const copy = [...prev];
+      const currentDays = copy[activeWeekIndex] || [];
+      copy[activeWeekIndex] = typeof updater === 'function' ? updater(currentDays) : updater;
+      return copy;
+    });
+  };
   
   // Add exercise dialog
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -91,6 +113,56 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
   const [newRepsMax, setNewRepsMax] = useState('12');
   const [newRir, setNewRir] = useState('2');
   const [newRest, setNewRest] = useState('120');
+  const [newExerciseNotes, setNewExerciseNotes] = useState('');
+
+  // Edit exercise state — when set, the dialog is in edit mode
+  const [editingExerciseRef, setEditingExerciseRef] = useState<{ dayId: string; exerciseId: string } | null>(null);
+  const isEditingExercise = !!editingExerciseRef;
+
+  // Load existing program data when editing
+  useEffect(() => {
+    if (!editingProgramId) return;
+    const program = (mesoState.availablePrograms || []).find(p => p.id === editingProgramId);
+    if (!program) return;
+
+    setProgramName(program.name);
+    setDescription(program.description || '');
+    setDifficulty(program.difficulty);
+    setDurationWeeks(String(program.durationWeeks));
+    setSplit(program.split);
+
+    // Convert ProgramDayTemplate[] → WorkoutDay[]
+    const toWorkoutDays = (days: ProgramDayTemplate[]): WorkoutDay[] =>
+      days.map((day, idx) => ({
+        id: `edit-${idx}-${Date.now()}`,
+        name: day.name,
+        dayType: day.dayType || 'workout',
+        exercises: (day.exercises || []).map((ex, exIdx) => ({
+          id: `edit-ex-${idx}-${exIdx}-${Date.now()}`,
+          exerciseName: ex.exerciseName || '',
+          muscleGroup: ex.muscleGroup,
+          sets: ex.sets,
+          repsMin: ex.repsMin,
+          repsMax: ex.repsMax,
+          rirTarget: ex.rirTarget,
+          restSeconds: ex.restSeconds,
+          supersetGroupId: ex.supersetGroupId,
+          supersetOrder: ex.supersetOrder,
+          notes: ex.notes,
+        })),
+        cardioFinisher: day.cardioFinisher,
+        notes: day.notes,
+      }));
+
+    if (program.weekTemplates && program.weekTemplates.length > 1) {
+      setVaryByWeek(true);
+      setWeeklyWorkoutDays(program.weekTemplates.map(wt => toWorkoutDays(wt.days)));
+    } else {
+      setVaryByWeek(false);
+      setWeeklyWorkoutDays([toWorkoutDays(program.weekTemplate.days)]);
+    }
+    setActiveWeekIndex(0);
+  }, [editingProgramId]);
 
   // Delete confirmation state
   const [deleteConfirmDay, setDeleteConfirmDay] = useState<string | null>(null);
@@ -236,6 +308,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
   // Open add exercise dialog
   const handleOpenAddExercise = (dayId: string) => {
     setEditingDayId(dayId);
+    setEditingExerciseRef(null);
     setShowAddExercise(true);
     setExerciseSearch('');
     setSelectedMuscle(null);
@@ -245,6 +318,24 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
     setNewRepsMax('12');
     setNewRir('2');
     setNewRest('120');
+    setNewExerciseNotes('');
+  };
+
+  // Open edit exercise dialog (pre-populated)
+  const handleOpenEditExercise = (dayId: string, exercise: ExerciseEntry) => {
+    setEditingDayId(dayId);
+    setEditingExerciseRef({ dayId, exerciseId: exercise.id });
+    setShowAddExercise(true);
+    setExerciseSearch('');
+    setSelectedMuscle(null);
+    setNewExerciseName(exercise.exerciseName);
+    setNewExerciseMuscle(exercise.muscleGroup);
+    setNewSets(String(exercise.sets));
+    setNewRepsMin(String(exercise.repsMin));
+    setNewRepsMax(String(exercise.repsMax));
+    setNewRir(String(exercise.rirTarget));
+    setNewRest(String(exercise.restSeconds));
+    setNewExerciseNotes(exercise.notes || '');
   };
 
   // Select an exercise from the library
@@ -257,8 +348,8 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
   const handleAddExercise = () => {
     if (!editingDayId || !newExerciseName) return;
 
-    const newExercise: ExerciseEntry = {
-      id: Date.now().toString(),
+    const exerciseData: ExerciseEntry = {
+      id: editingExerciseRef?.exerciseId || Date.now().toString(),
       exerciseName: newExerciseName,
       muscleGroup: newExerciseMuscle,
       sets: parseInt(newSets) || 3,
@@ -266,14 +357,33 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
       repsMax: parseInt(newRepsMax) || 12,
       rirTarget: parseInt(newRir) || 2,
       restSeconds: parseInt(newRest) || 120,
+      notes: newExerciseNotes.trim() || undefined,
     };
 
-    setWorkoutDays(workoutDays.map(d => 
-      d.id === editingDayId 
-        ? { ...d, exercises: [...d.exercises, newExercise] }
-        : d
-    ));
+    if (editingExerciseRef) {
+      // Update existing exercise in place
+      setWorkoutDays(workoutDays.map(d =>
+        d.id === editingDayId
+          ? {
+              ...d,
+              exercises: d.exercises.map(ex =>
+                ex.id === editingExerciseRef.exerciseId
+                  ? { ...exerciseData, supersetGroupId: ex.supersetGroupId, supersetOrder: ex.supersetOrder }
+                  : ex
+              ),
+            }
+          : d
+      ));
+    } else {
+      // Add new exercise
+      setWorkoutDays(workoutDays.map(d =>
+        d.id === editingDayId
+          ? { ...d, exercises: [...d.exercises, exerciseData] }
+          : d
+      ));
+    }
     setShowAddExercise(false);
+    setEditingExerciseRef(null);
   };
 
   // Remove exercise from day
@@ -287,16 +397,40 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
 
   // Save program
   const handleSaveProgram = () => {
-    if (!programName.trim() || workoutDays.length === 0) return;
+    // All weeks must have at least one day
+    const allWeeks = varyByWeek ? weeklyWorkoutDays : [workoutDays];
+    if (!programName.trim() || allWeeks.some(w => w.length === 0)) return;
+
+    // Helper: convert WorkoutDay[] → ProgramDayTemplate[]
+    const toDayTemplates = (days: WorkoutDay[]) => days.map((day, index) => ({
+      dayNumber: index + 1,
+      name: day.name,
+      dayType: day.dayType,
+      muscleGroups: day.dayType === 'workout' ? [...new Set(day.exercises.map(e => e.muscleGroup))] : undefined,
+      exercises: day.dayType === 'workout' ? day.exercises.map(e => ({
+        exerciseName: e.exerciseName,
+        muscleGroup: e.muscleGroup,
+        sets: e.sets,
+        repsMin: e.repsMin,
+        repsMax: e.repsMax,
+        rirTarget: e.rirTarget,
+        restSeconds: e.restSeconds,
+        notes: e.notes,
+        supersetGroupId: e.supersetGroupId,
+        supersetOrder: e.supersetOrder,
+      })) : undefined,
+      cardioFinisher: day.cardioFinisher,
+      notes: day.notes,
+    }));
 
     // Build the program
     const program: TrainingProgram = {
-      id: `custom-${Date.now()}`,
+      id: isEditing ? editingProgramId! : `custom-${Date.now()}`,
       name: programName.trim(),
       description: description.trim() || `Custom ${split} program`,
       difficulty,
       durationWeeks: parseInt(durationWeeks) || 5,
-      daysPerWeek: workoutDays.length,
+      daysPerWeek: Math.max(...allWeeks.map(w => w.length)),
       split,
       goals: ['hypertrophy'],
       musclePriorities: Object.fromEntries(
@@ -308,44 +442,58 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
       startingVolumeMultiplier: 1.0,
       volumeProgressionPerWeek: 1,
       tags: ['custom', split.toLowerCase().replace(/\//g, '-')],
-      weekTemplate: {
-        days: workoutDays.map((day, index) => ({
-          dayNumber: index + 1,
-          name: day.name,
-          dayType: day.dayType,
-          muscleGroups: day.dayType === 'workout' ? [...new Set(day.exercises.map(e => e.muscleGroup))] : undefined,
-          exercises: day.dayType === 'workout' ? day.exercises.map(e => ({
-            exerciseName: e.exerciseName,
-            muscleGroup: e.muscleGroup,
-            sets: e.sets,
-            repsMin: e.repsMin,
-            repsMax: e.repsMax,
-            rirTarget: e.rirTarget,
-            restSeconds: e.restSeconds,
-            supersetGroupId: e.supersetGroupId,
-            supersetOrder: e.supersetOrder,
-          })) : undefined,
-          cardioFinisher: day.cardioFinisher,
-          notes: day.notes,
-        })),
-      },
+      // Single week template (always set for backward compatibility)
+      weekTemplate: { days: toDayTemplates(allWeeks[0]) },
+      // Multi-week templates (only set when varying by week)
+      weekTemplates: varyByWeek ? allWeeks.map((days, wIdx) => ({
+        weekNumber: wIdx + 1,
+        days: toDayTemplates(days),
+      })) : undefined,
     };
 
-    // Start the program
-    dispatch({
-      type: 'START_PROGRAM',
-      payload: {
-        program,
-        startDate: new Date().toISOString(),
-      },
-    });
+    // Save the custom program so it persists in the programs list
+    dispatch({ type: 'SAVE_CUSTOM_PROGRAM', payload: program });
 
-    navigation.navigate('Home');
+    if (isEditing) {
+      // In edit mode: update active mesocycle if it uses this program, then go back
+      if (mesoState.activeMesoCycle?.programId === editingProgramId) {
+        dispatch({ type: 'UPDATE_ACTIVE_MESOCYCLE_FROM_PROGRAM', payload: program });
+      }
+      navigation.goBack();
+    } else {
+      // In create mode: start the program immediately
+      dispatch({
+        type: 'START_PROGRAM',
+        payload: {
+          program,
+          startDate: new Date().toISOString(),
+        },
+      });
+      navigation.navigate('Home');
+    }
   };
 
-  // Workout days need exercises, non-workout days are always valid
-  const canSave = programName.trim() && workoutDays.length > 0 && 
-    workoutDays.every(d => d.dayType !== 'workout' || d.exercises.length > 0);
+  // All weeks must have days, and workout days need exercises
+  const allWeeksForValidation = varyByWeek ? weeklyWorkoutDays : [workoutDays];
+  const canSave = programName.trim() && allWeeksForValidation.every(week => 
+    week.length > 0 && week.every(d => d.dayType !== 'workout' || d.exercises.length > 0)
+  );
+
+  // Build a human-readable validation hint when save is disabled
+  const getValidationHint = (): string | null => {
+    if (!programName.trim()) return 'Enter a program name';
+    for (let wIdx = 0; wIdx < allWeeksForValidation.length; wIdx++) {
+      const week = allWeeksForValidation[wIdx];
+      const weekLabel = varyByWeek ? `Week ${wIdx + 1}: ` : '';
+      if (week.length === 0) return `${weekLabel}Add at least one day`;
+      for (const day of week) {
+        if (day.dayType === 'workout' && day.exercises.length === 0) {
+          return `${weekLabel}"${day.name}" needs at least one exercise`;
+        }
+      }
+    }
+    return null;
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -414,8 +562,82 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
 
         {/* Workout Days */}
         <Surface style={styles.card} elevation={1}>
+          {/* Week variation toggle */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="labelLarge">Vary by week</Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                {varyByWeek ? 'Each week has different workouts' : 'Same workouts every week'}
+              </Text>
+            </View>
+            <Switch
+              value={varyByWeek}
+              onValueChange={(val) => {
+                setVaryByWeek(val);
+                if (val && weeklyWorkoutDays.length === 1) {
+                  // Start with 2 weeks when enabling variation
+                  setWeeklyWorkoutDays(prev => [...prev, []]);
+                }
+                setActiveWeekIndex(0);
+              }}
+            />
+          </View>
+
+          {/* Week tabs (only when varying by week) */}
+          {varyByWeek && (
+            <View style={{ marginBottom: 12 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {weeklyWorkoutDays.map((_, wIdx) => (
+                  <Chip
+                    key={wIdx}
+                    selected={activeWeekIndex === wIdx}
+                    onPress={() => setActiveWeekIndex(wIdx)}
+                    compact
+                    style={{ marginRight: 4 }}
+                    showSelectedCheck={false}
+                    onLongPress={() => {
+                      if (weeklyWorkoutDays.length > 1) {
+                        setWeeklyWorkoutDays(prev => prev.filter((_, i) => i !== wIdx));
+                        setActiveWeekIndex(Math.min(activeWeekIndex, weeklyWorkoutDays.length - 2));
+                      }
+                    }}
+                  >
+                    Week {wIdx + 1}
+                  </Chip>
+                ))}
+                <Chip
+                  compact
+                  style={{ marginRight: 4 }}
+                  onPress={() => {
+                    setWeeklyWorkoutDays(prev => [...prev, []]);
+                    setActiveWeekIndex(weeklyWorkoutDays.length);
+                  }}
+                >
+                  + Week
+                </Chip>
+                <Chip
+                  compact
+                  style={{ marginRight: 4 }}
+                  onPress={() => {
+                    // Copy current week's days to a new week
+                    const currentDays = weeklyWorkoutDays[activeWeekIndex] || [];
+                    const copiedDays = currentDays.map(day => ({
+                      ...day,
+                      id: Date.now().toString() + Math.random(),
+                      exercises: day.exercises.map(ex => ({ ...ex, id: Date.now().toString() + Math.random() })),
+                    }));
+                    setWeeklyWorkoutDays(prev => [...prev, copiedDays]);
+                    setActiveWeekIndex(weeklyWorkoutDays.length);
+                  }}
+                >
+                  Copy Week {activeWeekIndex + 1}
+                </Chip>
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.sectionHeader}>
-            <Text variant="titleMedium">Workout Days</Text>
+            <Text variant="titleMedium">{varyByWeek ? `Week ${activeWeekIndex + 1} Days` : 'Workout Days'}</Text>
             <Button 
               mode="contained-tonal" 
               compact 
@@ -550,7 +772,8 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                                   </TouchableOpacity>
                                 </View>
                                 {groupExercises.map((groupEx, gIdx) => (
-                                  <View key={groupEx.id} style={[styles.exerciseRow, { marginLeft: 8, borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}>
+                                  <TouchableOpacity key={groupEx.id} onPress={() => handleOpenEditExercise(day.id, groupEx)}>
+                                  <View style={[styles.exerciseRow, { marginLeft: 8, borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}>
                                     <View style={{ flex: 1 }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                         <Text style={{ 
@@ -567,13 +790,22 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                                         <Text variant="bodyMedium">{groupEx.exerciseName}</Text>
                                       </View>
                                       <Text variant="bodySmall" style={{ color: theme.colors.outline, marginLeft: 28 }}>
-                                        {groupEx.sets} sets × {groupEx.repsMin}-{groupEx.repsMax} reps
+                                        {groupEx.sets} sets × {groupEx.repsMin}-{groupEx.repsMax} reps • RIR {groupEx.rirTarget} • {groupEx.restSeconds}s rest
                                       </Text>
+                                      {groupEx.notes ? (
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 28, marginTop: 2 }}>
+                                          <MaterialCommunityIcons name={AppIcons.notes} size={12} color={theme.colors.outline} style={{ marginRight: 4 }} />
+                                          <Text variant="bodySmall" style={{ color: theme.colors.outline, fontStyle: 'italic', flex: 1 }}>
+                                            {groupEx.notes}
+                                          </Text>
+                                        </View>
+                                      ) : null}
                                     </View>
                                     <TouchableOpacity onPress={() => setDeleteConfirmExercise({ dayId: day.id, exerciseId: groupEx.id })}>
                                       <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.error} />
                                     </TouchableOpacity>
                                   </View>
+                                  </TouchableOpacity>
                                 ))}
                               </Surface>
                             );
@@ -587,15 +819,24 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                           const isSourceExercise = supersetMode?.exerciseId === exercise.id;
                           
                           return (
-                            <View key={exercise.id} style={[
+                            <TouchableOpacity key={exercise.id} onPress={() => handleOpenEditExercise(day.id, exercise)}>
+                            <View style={[
                               styles.exerciseRow, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) },
                               isLinkingMode && !isSourceExercise && { borderColor: theme.colors.primary, borderWidth: 2, borderStyle: 'dashed' }
                             ]}>
                               <View style={{ flex: 1 }}>
                                 <Text variant="bodyMedium">{exercise.exerciseName}</Text>
                                 <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                                  {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps
+                                  {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps • RIR {exercise.rirTarget} • {exercise.restSeconds}s rest
                                 </Text>
+                                {exercise.notes ? (
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                                    <MaterialCommunityIcons name={AppIcons.notes} size={12} color={theme.colors.outline} style={{ marginRight: 4 }} />
+                                    <Text variant="bodySmall" style={{ color: theme.colors.outline, fontStyle: 'italic', flex: 1 }}>
+                                      {exercise.notes}
+                                    </Text>
+                                  </View>
+                                ) : null}
                               </View>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                 {/* Superset link button */}
@@ -626,6 +867,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                             </TouchableOpacity>
                           </View>
                         </View>
+                        </TouchableOpacity>
                       );
                     });
                   })()
@@ -710,13 +952,18 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
 
       {/* Save Button */}
       <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
+        {!canSave && getValidationHint() && (
+          <Text variant="bodySmall" style={{ color: theme.colors.error, textAlign: 'center', marginBottom: 8 }}>
+            {getValidationHint()}
+          </Text>
+        )}
         <Button 
           mode="contained" 
           onPress={handleSaveProgram}
           disabled={!canSave}
           style={styles.saveButton}
         >
-          Save & Start Program
+          {isEditing ? 'Save Program' : 'Save & Start Program'}
         </Button>
       </View>
 
@@ -727,7 +974,7 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
           onDismiss={() => setShowAddExercise(false)}
           style={{ maxHeight: '85%' }}
         >
-          <Dialog.Title>Add Exercise</Dialog.Title>
+          <Dialog.Title>{isEditingExercise ? 'Edit Exercise' : 'Add Exercise'}</Dialog.Title>
           <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
             <ScrollView style={{ paddingHorizontal: 24 }}>
               {/* Exercise Search */}
@@ -829,6 +1076,15 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                   <View style={[styles.row, { marginTop: 8 }]}>
                     <TextInput
                       mode="outlined"
+                      label="RIR"
+                      value={newRir}
+                      onChangeText={setNewRir}
+                      keyboardType="number-pad"
+                      dense
+                      style={{ flex: 1, marginRight: 8 }}
+                    />
+                    <TextInput
+                      mode="outlined"
                       label="Rest (sec)"
                       value={newRest}
                       onChangeText={setNewRest}
@@ -837,6 +1093,18 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
                       style={{ flex: 1 }}
                     />
                   </View>
+
+                  <TextInput
+                    mode="outlined"
+                    label="Notes (optional)"
+                    value={newExerciseNotes}
+                    onChangeText={setNewExerciseNotes}
+                    dense
+                    multiline
+                    numberOfLines={2}
+                    placeholder="e.g., 1s pause at bottom, controlled negative"
+                    style={{ marginTop: 8 }}
+                  />
                 </>
               ) : (
                 <Text variant="bodySmall" style={{ color: theme.colors.outline, textAlign: 'center' }}>
@@ -847,9 +1115,9 @@ export function CreateProgramScreen({ navigation }: CreateProgramScreenProps) {
             </ScrollView>
           </Dialog.ScrollArea>
           <Dialog.Actions>
-            <Button onPress={() => setShowAddExercise(false)}>Cancel</Button>
+            <Button onPress={() => { setShowAddExercise(false); setEditingExerciseRef(null); }}>Cancel</Button>
             <Button onPress={handleAddExercise} disabled={!newExerciseName}>
-              Add Exercise
+              {isEditingExercise ? 'Save' : 'Add Exercise'}
             </Button>
           </Dialog.Actions>
         </Dialog>

@@ -414,6 +414,56 @@ function mesoCycleReducer(state: MesoCycleState, action: MesoCycleAction): MesoC
       break;
     }
 
+    case 'SAVE_CUSTOM_PROGRAM': {
+      const existingIdx = state.availablePrograms.findIndex(p => p.id === action.payload.id);
+      const updatedPrograms = existingIdx >= 0
+        ? state.availablePrograms.map(p => p.id === action.payload.id ? action.payload : p)
+        : [...state.availablePrograms, action.payload];
+      newState = {
+        ...state,
+        availablePrograms: updatedPrograms,
+      };
+      break;
+    }
+
+    case 'DELETE_CUSTOM_PROGRAM': {
+      newState = {
+        ...state,
+        availablePrograms: state.availablePrograms.filter(p => p.id !== action.payload),
+      };
+      break;
+    }
+
+    case 'UPDATE_ACTIVE_MESOCYCLE_FROM_PROGRAM': {
+      const program = action.payload;
+      if (!state.activeMesoCycle || state.activeMesoCycle.programId !== program.id) {
+        newState = state;
+        break;
+      }
+      // Patch the active mesocycle template/metadata while preserving all progress
+      const updatedMeso = {
+        ...state.activeMesoCycle,
+        name: program.name,
+        description: program.description,
+        programName: program.name,
+        musclePriorities: program.musclePriorities,
+        weeklyFrequency: program.weeklyFrequency,
+        weekTemplate: program.weekTemplate,
+        weekTemplates: program.weekTemplates,
+        updatedAt: new Date().toISOString(),
+      };
+      // Also update in mesoCycleHistory
+      const updatedHistory = state.mesoCycleHistory.map(m =>
+        m.id === updatedMeso.id ? updatedMeso : m
+      );
+      newState = {
+        ...state,
+        activeMesoCycle: updatedMeso,
+        mesoCycleHistory: updatedHistory,
+      };
+      break;
+    }
+
     case 'LOAD_STATE':
       return action.payload as MesoCycleState;
 
@@ -474,6 +524,7 @@ function createMesoCycleFromProgram(program: TrainingProgram, startDate: string)
     programId: program.id,
     programName: program.name,
     weekTemplate: program.weekTemplate,
+    weekTemplates: program.weekTemplates,
     totalWorkouts: program.durationWeeks * program.daysPerWeek,
     completedWorkouts: 0,
     createdAt: new Date().toISOString(),

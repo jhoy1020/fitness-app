@@ -17,6 +17,8 @@ import {
   convertWeight,
   convertHeight,
   calculateWeeksToGoal,
+  generate1RMTestProtocol,
+  getWeekTemplate,
 } from '../formulas';
 import type { WorkoutSet, UserProfile } from '../../../types';
 
@@ -421,6 +423,91 @@ describe('formulas.ts', () => {
     it('should round up to next whole week', () => {
       const result = calculateWeeksToGoal(200, 207, 2.5);
       expect(result).toBe(3);
+    });
+  });
+
+  describe('generate1RMTestProtocol', () => {
+    it('should be exported from formulas module', () => {
+      expect(generate1RMTestProtocol).toBeDefined();
+      expect(typeof generate1RMTestProtocol).toBe('function');
+    });
+
+    it('should generate a valid protocol', () => {
+      const protocol = generate1RMTestProtocol('Barbell Bench Press', 300, 315);
+      expect(protocol.exerciseName).toBe('Barbell Bench Press');
+      expect(protocol.current1RM).toBe(300);
+      expect(protocol.goal1RM).toBe(315);
+      expect(protocol.attempts).toHaveLength(3);
+      expect(protocol.warmupSets.length).toBeGreaterThan(0);
+    });
+
+    it('should produce attempts in ascending weight order', () => {
+      const protocol = generate1RMTestProtocol('Barbell Bench Press', 300, 315);
+      for (let i = 1; i < protocol.attempts.length; i++) {
+        expect(protocol.attempts[i].weight).toBeGreaterThanOrEqual(
+          protocol.attempts[i - 1].weight
+        );
+      }
+    });
+  });
+
+  describe('getWeekTemplate', () => {
+    const week1 = { weekNumber: 1, days: [{ dayNumber: 1, name: 'Push A' }] };
+    const week2 = { weekNumber: 2, days: [{ dayNumber: 1, name: 'Push B' }] };
+    const week3 = { weekNumber: 3, days: [{ dayNumber: 1, name: 'Push C' }] };
+    const singleTemplate = { days: [{ dayNumber: 1, name: 'Push Day' }] };
+
+    it('should be exported from formulas module', () => {
+      expect(getWeekTemplate).toBeDefined();
+      expect(typeof getWeekTemplate).toBe('function');
+    });
+
+    it('should return weekTemplate when weekTemplates is undefined', () => {
+      const result = getWeekTemplate(singleTemplate, undefined, 0);
+      expect(result).toBe(singleTemplate);
+    });
+
+    it('should return weekTemplate when weekTemplates is empty array', () => {
+      const result = getWeekTemplate(singleTemplate, [], 0);
+      expect(result).toBe(singleTemplate);
+    });
+
+    it('should return null when both are undefined', () => {
+      const result = getWeekTemplate(undefined, undefined, 0);
+      expect(result).toBeNull();
+    });
+
+    it('should return correct week from weekTemplates by index', () => {
+      const templates = [week1, week2, week3];
+      expect(getWeekTemplate(singleTemplate, templates, 0)).toBe(week1);
+      expect(getWeekTemplate(singleTemplate, templates, 1)).toBe(week2);
+      expect(getWeekTemplate(singleTemplate, templates, 2)).toBe(week3);
+    });
+
+    it('should prefer weekTemplates over weekTemplate when both exist', () => {
+      const templates = [week1, week2];
+      const result = getWeekTemplate(singleTemplate, templates, 0);
+      expect(result).toBe(week1);
+      expect(result).not.toBe(singleTemplate);
+    });
+
+    it('should cycle back when weekIndex exceeds templates length', () => {
+      const templates = [week1, week2, week3];
+      expect(getWeekTemplate(singleTemplate, templates, 3)).toBe(week1);
+      expect(getWeekTemplate(singleTemplate, templates, 4)).toBe(week2);
+      expect(getWeekTemplate(singleTemplate, templates, 5)).toBe(week3);
+      expect(getWeekTemplate(singleTemplate, templates, 6)).toBe(week1);
+    });
+
+    it('should default weekIndex to 0', () => {
+      const result = getWeekTemplate(singleTemplate);
+      expect(result).toBe(singleTemplate);
+    });
+
+    it('should handle single-item weekTemplates array', () => {
+      const templates = [week1];
+      expect(getWeekTemplate(singleTemplate, templates, 0)).toBe(week1);
+      expect(getWeekTemplate(singleTemplate, templates, 5)).toBe(week1);
     });
   });
 });

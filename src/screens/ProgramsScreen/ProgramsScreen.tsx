@@ -2,12 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Text, Surface, useTheme, Chip, Button, Portal, Dialog, Divider } from 'react-native-paper';
+import { Text, Surface, useTheme, Chip, Button, Portal, Dialog, Divider, IconButton } from 'react-native-paper';
 import { useMesoCycle } from '../../context/MesoCycleContext';
 import { useUser } from '../../context/UserContext';
 import { TRAINING_PROGRAMS } from '../../data/programs/programs';
-import type { TrainingProgram, MuscleGroup } from '../../types';
+import type { TrainingProgram, MuscleGroup, ProgramDayTemplate } from '../../types';
 import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
+import { getWeekTemplate } from '../../utils/formulas/formulas';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { statusColors, withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
@@ -23,6 +24,16 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
   const [selectedProgram, setSelectedProgram] = useState<TrainingProgram | null>(null);
   const [filterDifficulty, setFilterDifficulty] = useState<string | null>(null);
   const [filterDays, setFilterDays] = useState<number | null>(null);
+  const [previewWeekIndex, setPreviewWeekIndex] = useState(0);
+  const [deleteConfirmProgram, setDeleteConfirmProgram] = useState<TrainingProgram | null>(null);
+
+  // Merge premade + custom programs
+  const allPrograms = useMemo(() => {
+    const customPrograms = mesoState.availablePrograms || [];
+    const premadeIds = new Set(TRAINING_PROGRAMS.map(p => p.id));
+    const uniqueCustom = customPrograms.filter(p => !premadeIds.has(p.id));
+    return [...TRAINING_PROGRAMS, ...uniqueCustom];
+  }, [mesoState.availablePrograms]);
 
   // Calculate suggested weight based on 1RM percentage for target reps
   const getWeightFrom1RM = (exerciseName: string, targetReps: number): number | null => {
@@ -48,24 +59,30 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
     
     const exerciseMap = new Map<string, { name: string; targetReps: number; suggestedWeight: number | null; oneRM: number | null }>();
     
-    selectedProgram.weekTemplate.days.forEach(day => {
-      // Only process workout days that have exercises
-      if (day.exercises) {
-        day.exercises.forEach(exercise => {
-          const exerciseName = exercise.exerciseName;
-          if (exerciseName && !exerciseMap.has(exerciseName)) {
-            const avgReps = Math.floor((exercise.repsMin + exercise.repsMax) / 2);
-            const suggestedWeight = getWeightFrom1RM(exerciseName, avgReps);
-            const oneRMRecord = getOneRepMax(exerciseName);
-            exerciseMap.set(exerciseName, {
-              name: exerciseName,
-              targetReps: avgReps,
-              suggestedWeight,
-              oneRM: oneRMRecord?.weight || null,
-            });
-          }
-        });
-      }
+    // Gather exercises from all week templates (or the single template)
+    const templates = selectedProgram.weekTemplates && selectedProgram.weekTemplates.length > 0
+      ? selectedProgram.weekTemplates
+      : [selectedProgram.weekTemplate];
+    
+    templates.forEach(template => {
+      template.days.forEach(day => {
+        if (day.exercises) {
+          day.exercises.forEach(exercise => {
+            const exerciseName = exercise.exerciseName;
+            if (exerciseName && !exerciseMap.has(exerciseName)) {
+              const avgReps = Math.floor((exercise.repsMin + exercise.repsMax) / 2);
+              const suggestedWeight = getWeightFrom1RM(exerciseName, avgReps);
+              const oneRMRecord = getOneRepMax(exerciseName);
+              exerciseMap.set(exerciseName, {
+                name: exerciseName,
+                targetReps: avgReps,
+                suggestedWeight,
+                oneRM: oneRMRecord?.weight || null,
+              });
+            }
+          });
+        }
+      });
     });
     
     return Array.from(exerciseMap.values());
@@ -75,7 +92,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
   const exercisesWithSuggestions = programExercisesWithWeights.filter(e => e.suggestedWeight !== null);
 
   // Filter programs
-  const filteredPrograms = TRAINING_PROGRAMS.filter(program => {
+  const filteredPrograms = allPrograms.filter(program => {
     if (filterDifficulty && program.difficulty !== filterDifficulty) return false;
     if (filterDays && program.daysPerWeek !== filterDays) return false;
     return true;
@@ -105,6 +122,15 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
     
     setSelectedProgram(null);
     navigation.navigate('Home');
+  };
+
+  // Handle deleting a custom program
+  const handleDeleteProgram = (program: TrainingProgram) => {
+    dispatch({ type: 'DELETE_CUSTOM_PROGRAM', payload: program.id });
+    setDeleteConfirmProgram(null);
+    if (selectedProgram?.id === program.id) {
+      setSelectedProgram(null);
+    }
   };
 
   // Get focus muscles
@@ -196,14 +222,21 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
             return (
               <TouchableOpacity
                 key={program.id}
-                onPress={() => setSelectedProgram(program)}
+                onPress={() => { setSelectedProgram(program); setPreviewWeekIndex(0); }}
               >
                 <Surface style={styles.programCard} elevation={1}>
                   <View style={styles.programHeader}>
                     <View style={{ flex: 1 }}>
-                      <Text variant="titleMedium" style={styles.programName}>
-                        {program.name}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text variant="titleMedium" style={styles.programName}>
+                          {program.name}
+                        </Text>
+                        {program.id.startsWith('custom-') && (
+                          <Chip compact style={{ height: 20 }} textStyle={{ fontSize: 9, lineHeight: 12 }}>
+                            Custom
+                          </Chip>
+                        )}
+                      </View>
                       <View style={styles.programMeta}>
                         <Chip 
                           compact 
@@ -217,6 +250,24 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                         </Text>
                       </View>
                     </View>
+                    {program.id.startsWith('custom-') && (
+                      <View style={{ flexDirection: 'row' }}>
+                        <IconButton
+                          icon={AppIcons.edit}
+                          size={18}
+                          iconColor={theme.colors.primary}
+                          onPress={() => navigation.navigate('CreateProgram', { programId: program.id })}
+                          style={{ margin: 0 }}
+                        />
+                        <IconButton
+                          icon={AppIcons.delete}
+                          size={18}
+                          iconColor={theme.colors.error}
+                          onPress={() => setDeleteConfirmProgram(program)}
+                          style={{ margin: 0 }}
+                        />
+                      </View>
+                    )}
                     <MaterialCommunityIcons name={AppIcons.chevronRight} size={24} color={theme.colors.onSurfaceVariant} />
                   </View>
 
@@ -310,7 +361,26 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
 
                   {/* Weekly Schedule */}
                   <Text variant="titleSmall" style={{ marginBottom: 8 }}>Weekly Schedule</Text>
-                  {selectedProgram.weekTemplate.days.map((day, idx) => {
+                  
+                  {/* Week tabs for multi-week programs */}
+                  {selectedProgram.weekTemplates && selectedProgram.weekTemplates.length > 1 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                      {selectedProgram.weekTemplates.map((_, wIdx) => (
+                        <Chip
+                          key={wIdx}
+                          selected={previewWeekIndex === wIdx}
+                          onPress={() => setPreviewWeekIndex(wIdx)}
+                          compact
+                          style={{ marginRight: 4 }}
+                          showSelectedCheck={false}
+                        >
+                          Week {wIdx + 1}
+                        </Chip>
+                      ))}
+                    </ScrollView>
+                  )}
+                  
+                  {(getWeekTemplate(selectedProgram.weekTemplate, selectedProgram.weekTemplates, previewWeekIndex)?.days || []).map((day: ProgramDayTemplate, idx: number) => {
                     const dayType = day.dayType || 'workout';
                     const getDayIcon = (): string => {
                       switch (dayType) {
@@ -431,6 +501,24 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
                 </ScrollView>
               </Dialog.ScrollArea>
               <Dialog.Actions>
+                {selectedProgram.id.startsWith('custom-') && (
+                  <Button 
+                    textColor={theme.colors.error}
+                    onPress={() => setDeleteConfirmProgram(selectedProgram)}
+                  >
+                    Delete
+                  </Button>
+                )}
+                {selectedProgram.id.startsWith('custom-') && (
+                  <Button
+                    onPress={() => {
+                      setSelectedProgram(null);
+                      navigation.navigate('CreateProgram', { programId: selectedProgram.id });
+                    }}
+                  >
+                    Edit
+                  </Button>
+                )}
                 <Button onPress={() => setSelectedProgram(null)}>Cancel</Button>
                 <Button mode="contained" onPress={handleStartProgram}>
                   Start Program
@@ -438,6 +526,25 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
               </Dialog.Actions>
             </React.Fragment>
           )}
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog visible={!!deleteConfirmProgram} onDismiss={() => setDeleteConfirmProgram(null)}>
+          <Dialog.Title>Delete Program?</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Are you sure you want to delete "{deleteConfirmProgram?.name}"? This cannot be undone.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteConfirmProgram(null)}>Cancel</Button>
+            <Button 
+              textColor={theme.colors.error}
+              onPress={() => deleteConfirmProgram && handleDeleteProgram(deleteConfirmProgram)}
+            >
+              Delete
+            </Button>
+          </Dialog.Actions>
         </Dialog>
       </Portal>
     </View>

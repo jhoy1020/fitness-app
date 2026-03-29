@@ -401,6 +401,21 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
         </Surface>
       )}
 
+      {/* 1RM Test Day Card */}
+      <Surface style={styles.card} elevation={1}>
+        <Text variant="titleMedium" style={styles.sectionTitle}>Test Your 1RM</Text>
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}>
+          Ready to hit a new personal record? Follow a structured 3-attempt test protocol.
+        </Text>
+        <Button
+          mode="contained-tonal"
+          icon={AppIcons.pr}
+          onPress={() => navigation.navigate('OneRepMaxTest')}
+        >
+          Start 1RM Test
+        </Button>
+      </Surface>
+
       {/* 1RM Calculator Card */}
       <Surface style={styles.card} elevation={1}>
         <Text variant="titleMedium" style={styles.sectionTitle}>1RM Calculator</Text>
