@@ -175,10 +175,10 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Full Body A',
           muscleGroups: ['quadriceps', 'chest', 'back', 'shoulders', 'core'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 2, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 120 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 67 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 2, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 120 , weightMode: 'percentage', percentageOf1RM: 67 },
             { muscleGroup: 'core', exerciseName: 'Plank', category: 'isolation', sets: 2, repsMin: 30, repsMax: 60, rirTarget: 1, restSeconds: 60, notes: 'seconds' },
           ],
         },
@@ -235,9 +235,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Upper A (Push Focus)',
           muscleGroups: ['chest', 'shoulders', 'triceps', 'back', 'biceps'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
             { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 90 },
             { muscleGroup: 'biceps', exerciseName: 'Incline Dumbbell Curls', category: 'isolation', sets: 2, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 90 },
@@ -249,7 +249,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Lower A (Quad Focus)',
           muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves', 'core'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'hamstrings', exerciseName: 'Romanian Deadlift', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
@@ -275,7 +275,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Lower B (Posterior Focus)',
           muscleGroups: ['hamstrings', 'glutes', 'quadriceps', 'calves', 'core'],
           exercises: [
-            { muscleGroup: 'hamstrings', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 4, repsMin: 5, repsMax: 8, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'hamstrings', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 4, repsMin: 5, repsMax: 8, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 75 },
             { muscleGroup: 'quadriceps', exerciseName: 'Front Squat', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
             { muscleGroup: 'glutes', exerciseName: 'Bulgarian Split Squat', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'hamstrings', exerciseName: 'Lying Leg Curl', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 90 },
@@ -337,8 +337,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Push A',
           muscleGroups: ['chest', 'shoulders', 'triceps'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 150 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 4, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 60 },
             { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 90 },
@@ -351,7 +351,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Pull A',
           muscleGroups: ['back', 'biceps', 'shoulders'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 4, repsMin: 6, repsMax: 12, rirTarget: 2, restSeconds: 150 },
             { muscleGroup: 'back', exerciseName: 'Seated Cable Row', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'shoulders', exerciseName: 'Face Pulls', category: 'isolation', sets: 4, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 60 },
@@ -365,7 +365,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Legs A',
           muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'hamstrings', exerciseName: 'Romanian Deadlift', category: 'compound', sets: 4, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
@@ -478,8 +478,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Push',
           muscleGroups: ['chest', 'shoulders', 'triceps'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
             { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 3, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 60 },
             { muscleGroup: 'triceps', exerciseName: 'Overhead Tricep Extension', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 90 },
@@ -490,7 +490,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Pull',
           muscleGroups: ['back', 'biceps', 'shoulders'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'back', exerciseName: 'Lat Pulldown', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'back', exerciseName: 'Seated Cable Row', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'shoulders', exerciseName: 'Face Pulls', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 60 },
@@ -502,7 +502,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Legs',
           muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'hamstrings', exerciseName: 'Romanian Deadlift', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
@@ -559,7 +559,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Legs - Quad Focus',
           muscleGroups: ['quadriceps', 'glutes', 'calves'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 4, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 150 },
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Extension', category: 'isolation', sets: 3, repsMin: 12, repsMax: 15, rirTarget: 1, restSeconds: 90 },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
@@ -571,8 +571,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Upper Push',
           muscleGroups: ['chest', 'shoulders', 'triceps'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
             { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 3, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 60 },
             { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 1, restSeconds: 90 },
@@ -595,7 +595,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Upper Pull',
           muscleGroups: ['back', 'biceps', 'shoulders'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'back', exerciseName: 'Lat Pulldown', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'back', exerciseName: 'Seated Cable Row', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120 },
             { muscleGroup: 'shoulders', exerciseName: 'Face Pulls', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 60 },
@@ -644,8 +644,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           muscleGroups: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
           exercises: [
             // Superset 1: Chest + Back (antagonist pairing)
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-a-ss1', supersetOrder: 0, notes: 'Superset with Barbell Row' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, supersetGroupId: 'upper-a-ss1', supersetOrder: 1, notes: 'Superset with Bench Press' },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-a-ss1', supersetOrder: 0, notes: 'Superset with Barbell Row' , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, supersetGroupId: 'upper-a-ss1', supersetOrder: 1, notes: 'Superset with Bench Press' , weightMode: 'percentage', percentageOf1RM: 70 },
             // Superset 2: Incline Press + Lat Pulldown
             { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-a-ss2', supersetOrder: 0, notes: 'Superset with Lat Pulldown' },
             { muscleGroup: 'back', exerciseName: 'Lat Pulldown', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'upper-a-ss2', supersetOrder: 1, notes: 'Superset with Incline Press' },
@@ -662,7 +662,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'calves', 'core'],
           exercises: [
             // Heavy compound first - no superset
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
             // Superset: Leg Press + RDL
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'lower-a-ss1', supersetOrder: 0, notes: 'Superset with RDL' },
             { muscleGroup: 'hamstrings', exerciseName: 'Romanian Deadlift', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'lower-a-ss1', supersetOrder: 1, notes: 'Superset with Leg Press' },
@@ -681,7 +681,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           exercises: [
             // Superset 1: Pull-ups + OHP
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 4, repsMin: 6, repsMax: 12, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-b-ss1', supersetOrder: 0, notes: 'Superset with OHP' },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, supersetGroupId: 'upper-b-ss1', supersetOrder: 1, notes: 'Superset with Pull-ups' },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, supersetGroupId: 'upper-b-ss1', supersetOrder: 1, notes: 'Superset with Pull-ups' , weightMode: 'percentage', percentageOf1RM: 70 },
             // Superset 2: Cable Row + Dumbbell Press
             { muscleGroup: 'back', exerciseName: 'Seated Cable Row', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'upper-b-ss2', supersetOrder: 0, notes: 'Superset with DB Press' },
             { muscleGroup: 'chest', exerciseName: 'Dumbbell Bench Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'upper-b-ss2', supersetOrder: 1, notes: 'Superset with Row' },
@@ -699,7 +699,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           muscleGroups: ['hamstrings', 'glutes', 'quadriceps', 'calves', 'core'],
           exercises: [
             // Heavy compound first
-            { muscleGroup: 'hamstrings', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 4, repsMin: 5, repsMax: 8, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'hamstrings', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 4, repsMin: 5, repsMax: 8, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 75 },
             // Superset: Split Squat + Hip Thrust
             { muscleGroup: 'quadriceps', exerciseName: 'Bulgarian Split Squat', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 30, supersetGroupId: 'lower-b-ss1', supersetOrder: 0, notes: 'Superset with Hip Thrust' },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90, supersetGroupId: 'lower-b-ss1', supersetOrder: 1, notes: 'Superset with Split Squat' },
@@ -751,8 +751,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Squat Day',
           muscleGroups: ['quadriceps', 'hamstrings', 'glutes', 'core'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' },
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' , weightMode: 'percentage', percentageOf1RM: 55 },
             { muscleGroup: 'hamstrings', exerciseName: 'Lying Leg Curl', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90 },
             { muscleGroup: 'core', exerciseName: 'Hanging Leg Raise', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
           ],
@@ -762,9 +762,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Bench Day',
           muscleGroups: ['chest', 'triceps', 'shoulders'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 90 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' , weightMode: 'percentage', percentageOf1RM: 55 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 90 , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
           ],
           abFinisher: AB_FINISHERS.noEquipmentAbs,
@@ -774,8 +774,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Deadlift Day',
           muscleGroups: ['back', 'hamstrings', 'glutes', 'core'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' },
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' , weightMode: 'percentage', percentageOf1RM: 55 },
             { muscleGroup: 'hamstrings', exerciseName: 'Good Morning', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90 },
             { muscleGroup: 'core', exerciseName: 'Ab Wheel Rollout', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
           ],
@@ -785,8 +785,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Overhead Press Day',
           muscleGroups: ['shoulders', 'triceps', 'back'],
           exercises: [
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: '5/3/1 main sets at 65/75/85% (week 1)' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 10, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'BBB sets at 50-60%' , weightMode: 'percentage', percentageOf1RM: 55 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 5, repsMin: 5, repsMax: 10, rirTarget: 2, restSeconds: 90, notes: 'Add weight if needed' },
             { muscleGroup: 'biceps', exerciseName: 'Barbell Curl', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
           ],
@@ -823,9 +823,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Workout A',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session (alternates with OHP)' },
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 10lbs each session' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session (alternates with OHP)' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 10lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
           ],
         },
         {
@@ -833,8 +833,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Workout B',
           muscleGroups: ['quadriceps', 'shoulders', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session (alternates with Bench)' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session (alternates with Bench)' , weightMode: 'percentage', percentageOf1RM: 85 },
             { muscleGroup: 'back', exerciseName: 'Power Clean', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 180, notes: 'Focus on explosive technique' },
           ],
         },
@@ -843,9 +843,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Workout A',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 10lbs each session' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 10lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
           ],
         },
       ],
@@ -878,9 +878,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Workout A',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
           ],
         },
         {
@@ -888,9 +888,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Workout B',
           muscleGroups: ['quadriceps', 'shoulders', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 10lbs each session' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Add 10lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
           ],
         },
         {
@@ -898,9 +898,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Workout A',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add 5lbs each session' , weightMode: 'percentage', percentageOf1RM: 85 },
           ],
         },
       ],
@@ -939,7 +939,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Squat Focus',
           muscleGroups: ['quadriceps', 'hamstrings', 'back', 'core'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy singles/triples at 85-95%' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy singles/triples at 85-95%' , weightMode: 'percentage', percentageOf1RM: 90 },
             { muscleGroup: 'quadriceps', exerciseName: 'Front Squat', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 150, notes: 'T2: Moderate weight, higher reps' },
             { muscleGroup: 'hamstrings', exerciseName: 'Romanian Deadlift', category: 'compound', sets: 3, repsMin: 10, repsMax: 12, rirTarget: 2, restSeconds: 120, notes: 'T2 supplemental' },
             { muscleGroup: 'back', exerciseName: 'Lat Pulldown', category: 'compound', sets: 3, repsMin: 12, repsMax: 15, rirTarget: 1, restSeconds: 60, notes: 'T3: Light, high reps' },
@@ -951,9 +951,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Bench Focus',
           muscleGroups: ['chest', 'shoulders', 'triceps', 'back'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy at 85-95%' },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy at 85-95%' , weightMode: 'percentage', percentageOf1RM: 90 },
             { muscleGroup: 'chest', exerciseName: 'Close Grip Bench Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 150, notes: 'T2 variation' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'T2 pull balance' },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'T2 pull balance' , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 45, notes: 'T3 accessory' },
             { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 45, notes: 'T3 accessory' },
           ],
@@ -963,7 +963,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Deadlift Focus',
           muscleGroups: ['back', 'hamstrings', 'glutes', 'biceps'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy at 85-95%' },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy at 85-95%' , weightMode: 'percentage', percentageOf1RM: 90 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 150, notes: 'T2: Weighted if possible' },
             { muscleGroup: 'hamstrings', exerciseName: 'Good Morning', category: 'compound', sets: 3, repsMin: 10, repsMax: 12, rirTarget: 2, restSeconds: 120, notes: 'T2 supplemental' },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 12, repsMax: 15, rirTarget: 1, restSeconds: 60, notes: 'T3 accessory' },
@@ -975,7 +975,7 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Overhead Press Focus',
           muscleGroups: ['shoulders', 'chest', 'back', 'triceps'],
           exercises: [
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy at 85-95%' },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 3, repsMax: 3, rirTarget: 1, restSeconds: 300, notes: 'T1: Heavy at 85-95%' , weightMode: 'percentage', percentageOf1RM: 90 },
             { muscleGroup: 'shoulders', exerciseName: 'Dumbbell Shoulder Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 150, notes: 'T2 variation' },
             { muscleGroup: 'chest', exerciseName: 'Incline Dumbbell Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 12, rirTarget: 2, restSeconds: 120, notes: 'T2 supplemental' },
             { muscleGroup: 'back', exerciseName: 'Face Pulls', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 45, notes: 'T3 for shoulder health' },
@@ -1019,9 +1019,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Volume Day',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 240, notes: 'Use 90% of 5RM - accumulate volume' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 240, notes: 'Use 90% of 5RM' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 180 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 240, notes: 'Use 90% of 5RM - accumulate volume' , weightMode: 'percentage', percentageOf1RM: 77 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 240, notes: 'Use 90% of 5RM' , weightMode: 'percentage', percentageOf1RM: 77 },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 80 },
           ],
         },
         {
@@ -1029,8 +1029,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Recovery Day',
           muscleGroups: ['quadriceps', 'shoulders', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 2, repsMin: 5, repsMax: 5, rirTarget: 4, restSeconds: 180, notes: 'Light - 80% of Monday weight' },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 180, notes: 'Can push intensity here' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 2, repsMin: 5, repsMax: 5, rirTarget: 4, restSeconds: 180, notes: 'Light - 80% of Monday weight' , weightMode: 'percentage', percentageOf1RM: 65 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 2, restSeconds: 180, notes: 'Can push intensity here' , weightMode: 'percentage', percentageOf1RM: 80 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 3, repsMin: 5, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'Bodyweight or weighted' },
             { muscleGroup: 'back', exerciseName: 'Back Extension', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90 },
           ],
@@ -1040,9 +1040,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Intensity Day',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 0, restSeconds: 300, notes: 'New 5RM PR attempt!' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 0, restSeconds: 300, notes: 'New 5RM PR attempt!' },
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 0, restSeconds: 300, notes: 'New 5RM PR attempt!' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 0, restSeconds: 300, notes: 'New 5RM PR attempt!' , weightMode: 'percentage', percentageOf1RM: 95 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 0, restSeconds: 300, notes: 'New 5RM PR attempt!' , weightMode: 'percentage', percentageOf1RM: 95 },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 1, repsMin: 5, repsMax: 5, rirTarget: 0, restSeconds: 300, notes: 'New 5RM PR attempt!' , weightMode: 'percentage', percentageOf1RM: 95 },
           ],
         },
       ],
@@ -1090,9 +1090,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Lower Body + Push',
           muscleGroups: ['quadriceps', 'chest', 'shoulders', 'triceps'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 4, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 180 , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 150 , weightMode: 'percentage', percentageOf1RM: 67 },
             { muscleGroup: 'triceps', exerciseName: 'Dip', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 120 },
           ],
         },
@@ -1157,8 +1157,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Squat & Bench',
           muscleGroups: ['quadriceps', 'chest', 'triceps', 'core'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: 'Primary focus - track PRs' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: 'Primary focus - track PRs' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: 'Primary focus - track PRs' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: 'Primary focus - track PRs' , weightMode: 'percentage', percentageOf1RM: 85 },
             { muscleGroup: 'quadriceps', exerciseName: 'Leg Press', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 120, notes: 'Supplemental volume' },
             { muscleGroup: 'triceps', exerciseName: 'Tricep Pushdown', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
             { muscleGroup: 'core', exerciseName: 'Ab Wheel Rollout', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
@@ -1169,9 +1169,9 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Deadlift & Pull-Ups',
           muscleGroups: ['back', 'hamstrings', 'biceps'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Primary focus - track PRs' },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Primary focus - track PRs' , weightMode: 'percentage', percentageOf1RM: 85 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 5, repsMin: 5, repsMax: 10, rirTarget: 1, restSeconds: 180, notes: 'Primary focus - add weight when possible' },
-            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 120, notes: 'Supplemental pulling' },
+            { muscleGroup: 'back', exerciseName: 'Barbell Row', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 120, notes: 'Supplemental pulling' , weightMode: 'percentage', percentageOf1RM: 67 },
             { muscleGroup: 'hamstrings', exerciseName: 'Lying Leg Curl', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90 },
             { muscleGroup: 'biceps', exerciseName: 'Barbell Curl', category: 'isolation', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 60 },
           ],
@@ -1181,8 +1181,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'OHP & Squat Volume',
           muscleGroups: ['shoulders', 'quadriceps', 'back'],
           exercises: [
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: 'Primary focus - track PRs' },
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 180, notes: 'Lighter weight, technique focus' },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 5, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 240, notes: 'Primary focus - track PRs' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 180, notes: 'Lighter weight, technique focus' , weightMode: 'percentage', percentageOf1RM: 70 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'Volume work' },
             { muscleGroup: 'shoulders', exerciseName: 'Lateral Raises', category: 'isolation', sets: 4, repsMin: 12, repsMax: 20, rirTarget: 1, restSeconds: 60 },
             { muscleGroup: 'shoulders', exerciseName: 'Face Pulls', category: 'isolation', sets: 3, repsMin: 15, repsMax: 20, rirTarget: 1, restSeconds: 60 },
@@ -1193,8 +1193,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Bench & Deadlift Volume',
           muscleGroups: ['chest', 'back', 'glutes', 'triceps'],
           exercises: [
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 180, notes: 'Lighter weight, technique focus' },
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 3, repsMin: 6, repsMax: 8, rirTarget: 2, restSeconds: 180, notes: 'Volume work - 70-80%' },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 10, rirTarget: 2, restSeconds: 180, notes: 'Lighter weight, technique focus' , weightMode: 'percentage', percentageOf1RM: 70 },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 3, repsMin: 6, repsMax: 8, rirTarget: 2, restSeconds: 180, notes: 'Volume work - 70-80%' , weightMode: 'percentage', percentageOf1RM: 75 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 3, repsMin: 6, repsMax: 10, rirTarget: 2, restSeconds: 120, notes: 'Volume work' },
             { muscleGroup: 'glutes', exerciseName: 'Hip Thrust', category: 'compound', sets: 3, repsMin: 10, repsMax: 15, rirTarget: 2, restSeconds: 90 },
             { muscleGroup: 'triceps', exerciseName: 'Close Grip Bench Press', category: 'compound', sets: 3, repsMin: 8, repsMax: 12, rirTarget: 2, restSeconds: 120 },
@@ -1230,8 +1230,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Strength A',
           muscleGroups: ['quadriceps', 'chest', 'back'],
           exercises: [
-            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' },
-            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' },
+            { muscleGroup: 'quadriceps', exerciseName: 'Barbell Back Squat', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'chest', exerciseName: 'Barbell Bench Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' , weightMode: 'percentage', percentageOf1RM: 85 },
             { muscleGroup: 'back', exerciseName: 'Weighted Pull-Ups', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 180, notes: 'Add weight as able' },
           ],
         },
@@ -1240,8 +1240,8 @@ export const TRAINING_PROGRAMS: TrainingProgram[] = [
           name: 'Strength B',
           muscleGroups: ['back', 'shoulders', 'quadriceps'],
           exercises: [
-            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' },
-            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' },
+            { muscleGroup: 'back', exerciseName: 'Conventional Deadlift', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' , weightMode: 'percentage', percentageOf1RM: 85 },
+            { muscleGroup: 'shoulders', exerciseName: 'Overhead Press', category: 'compound', sets: 3, repsMin: 5, repsMax: 5, rirTarget: 1, restSeconds: 300, notes: 'Heavy - 80-90% of max' , weightMode: 'percentage', percentageOf1RM: 85 },
             { muscleGroup: 'back', exerciseName: 'Pull-Ups', category: 'compound', sets: 3, repsMin: 5, repsMax: 10, rirTarget: 2, restSeconds: 180, notes: 'Bodyweight for volume' },
           ],
         },

@@ -177,7 +177,7 @@ describe('CreateProgramScreen', () => {
 
   describe('edit program feature', () => {
     it('accepts route prop for edit mode', () => {
-      expect(SOURCE).toContain('route?: any');
+      expect(SOURCE).toContain("route?: RootScreenProps<'CreateProgram'>['route']");
     });
 
     it('reads programId from route params', () => {

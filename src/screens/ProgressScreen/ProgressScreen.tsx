@@ -1,7 +1,7 @@
 // Progress Screen - Track strength gains and 1RM estimates
 
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, Surface, useTheme, SegmentedButtons, Divider, Button, TextInput, Portal, Dialog } from 'react-native-paper';
 import { useWorkout } from '../../context/WorkoutContext';
 import { useUser } from '../../context/UserContext';
@@ -11,11 +11,12 @@ import WeightGraph from '../../components/WeightGraph/WeightGraph';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
+import type { TabScreenProps } from '../../navigation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ProgressScreenProps {
-  navigation: any;
+  navigation: TabScreenProps<'Progress'>['navigation'];
 }
 
 export function ProgressScreen({ navigation }: ProgressScreenProps) {
@@ -179,6 +180,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
     <ScrollView 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Time Range Selector */}
       <SegmentedButtons
@@ -368,39 +370,6 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
         )}
       </Surface>
 
-      {/* Nutrition Summary */}
-      {userState.nutrition && (
-        <Surface style={styles.card} elevation={1}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Daily Nutrition Targets</Text>
-          <View style={styles.nutritionGrid}>
-            <View style={styles.nutritionItem}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                {userState.nutrition.targetCalories}
-              </Text>
-              <Text variant="labelSmall">Calories</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.error }}>
-                {userState.nutrition.protein}g
-              </Text>
-              <Text variant="labelSmall">Protein</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.tertiary }}>
-                {userState.nutrition.carbs}g
-              </Text>
-              <Text variant="labelSmall">Carbs</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text variant="headlineSmall" style={{ color: theme.colors.secondary }}>
-                {userState.nutrition.fat}g
-              </Text>
-              <Text variant="labelSmall">Fat</Text>
-            </View>
-          </View>
-        </Surface>
-      )}
-
       {/* 1RM Test Day Card */}
       <Surface style={styles.card} elevation={1}>
         <Text variant="titleMedium" style={styles.sectionTitle}>Test Your 1RM</Text>
@@ -480,6 +449,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
 
       {/* Weight Entry Dialog */}
       <Portal>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Dialog visible={showWeightEntry} onDismiss={() => setShowWeightEntry(false)}>
           <Dialog.Title>Log Weight</Dialog.Title>
           <Dialog.Content>
@@ -528,6 +498,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
             </Button>
           </Dialog.Actions>
         </Dialog>
+        </KeyboardAvoidingView>
       </Portal>
     </ScrollView>
   );
@@ -614,13 +585,6 @@ const styles = StyleSheet.create({
   },
   e1rmValue: {
     alignItems: 'flex-end',
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  nutritionItem: {
-    alignItems: 'center',
   },
   calcInputRow: {
     flexDirection: 'row',

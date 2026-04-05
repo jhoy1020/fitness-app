@@ -7,14 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../../context/WorkoutContext';
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
 import { withAlpha } from '../../theme';
+import type { RootScreenProps } from '../../navigation';
 
 interface WorkoutDetailScreenProps {
-  navigation: any;
-  route: {
-    params: {
-      workoutId: string;
-    };
-  };
+  navigation: RootScreenProps<'WorkoutDetail'>['navigation'];
+  route: RootScreenProps<'WorkoutDetail'>['route'];
 }
 
 export function WorkoutDetailScreen({ navigation, route }: WorkoutDetailScreenProps) {
@@ -102,7 +99,7 @@ export function WorkoutDetailScreen({ navigation, route }: WorkoutDetailScreenPr
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
           <Text variant="headlineSmall" style={{ fontWeight: 'bold' }}>

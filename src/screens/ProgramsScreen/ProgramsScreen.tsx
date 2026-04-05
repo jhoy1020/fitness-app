@@ -7,6 +7,7 @@ import { useMesoCycle } from '../../context/MesoCycleContext';
 import { useUser } from '../../context/UserContext';
 import { TRAINING_PROGRAMS } from '../../data/programs/programs';
 import type { TrainingProgram, MuscleGroup, ProgramDayTemplate } from '../../types';
+import type { TabScreenProps } from '../../navigation';
 import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import { getWeekTemplate } from '../../utils/formulas/formulas';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -14,7 +15,7 @@ import { statusColors, withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
 
 interface ProgramsScreenProps {
-  navigation: any;
+  navigation: TabScreenProps<'Programs'>['navigation'];
 }
 
 export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
@@ -206,7 +207,7 @@ export function ProgramsScreen({ navigation }: ProgramsScreenProps) {
       </View>
 
       {/* Programs List */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
         {filteredPrograms.length === 0 ? (
           <Surface style={styles.emptyCard} elevation={1}>
             <MaterialCommunityIcons name={AppIcons.search} size={48} color={theme.colors.outline} style={{ marginBottom: 16 }} />

@@ -6,10 +6,12 @@ import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, SegmentedButt
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calculate1RM_Epley } from '../../utils/formulas/formulas';
 import { useMesoCycle } from '../../context/MesoCycleContext';
+import { useUser } from '../../context/UserContext';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
+import type { RootScreenProps } from '../../navigation';
 
 // Motivational messages
 const MOTIVATIONAL_MESSAGES = [
@@ -26,29 +28,15 @@ const MOTIVATIONAL_MESSAGES = [
 ];
 
 interface WorkoutSummaryScreenProps {
-  navigation: any;
-  route: {
-    params: {
-      workout: {
-        id: string;
-        name: string;
-        date: string;
-        duration: number;
-        sets: Array<{
-          exerciseName: string;
-          muscleGroup: string;
-          weight: number;
-          reps: number;
-        }>;
-      };
-    };
-  };
+  navigation: RootScreenProps<'WorkoutSummary'>['navigation'];
+  route: RootScreenProps<'WorkoutSummary'>['route'];
 }
 
 export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreenProps) {
   const theme = useTheme();
   const { workout } = route.params;
   const { state: mesoState, dispatch: mesoDispatch, addSetsToVolume } = useMesoCycle();
+  const { getOneRepMax, addOneRepMax } = useUser();
   const insets = useSafeAreaInsets();
 
   // Motivational popup state
@@ -101,8 +89,8 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
     return `${hours}h ${remainingMins}m`;
   };
 
-  // Group sets by exercise with best e1RM
-  const exerciseSummary = uniqueExercises.map(name => {
+  // Group sets by exercise with best e1RM + PR detection
+  const exerciseSummary = useMemo(() => uniqueExercises.map(name => {
     const exerciseSets = workout.sets.filter(s => s.exerciseName === name);
     const libEntry = EXERCISE_LIBRARY.find(e => e.name === name);
     const trackingType = libEntry?.trackingType || 'weight_reps';
@@ -114,6 +102,15 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
     const totalReps = exerciseSets.reduce((sum, s) => sum + s.reps, 0);
     const totalDuration = exerciseSets.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
     
+    // Check for new 1RM PR
+    let isNewPR = false;
+    if (!isDuration && best1RM > 0) {
+      const stored = getOneRepMax(name);
+      if (!stored || best1RM > stored.weight) {
+        isNewPR = true;
+      }
+    }
+    
     return {
       name,
       totalSets,
@@ -123,13 +120,23 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
       totalDuration,
       trackingType,
       isDuration,
+      isNewPR,
       muscleGroup: exerciseSets[0]?.muscleGroup || 'other',
     };
-  });
+  }), [uniqueExercises, workout.sets, getOneRepMax]);
+
+  // Auto-save new 1RM PRs (run once on mount)
+  useEffect(() => {
+    exerciseSummary.forEach(ex => {
+      if (ex.isNewPR && ex.best1RM > 0) {
+        addOneRepMax(ex.name, Math.round(ex.best1RM), 'calculated', `Auto-detected from ${workout.name}`);
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
           <MaterialCommunityIcons name={AppIcons.workout} size={48} color={theme.colors.primary} style={{ marginBottom: 8 }} />
@@ -199,8 +206,15 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
                 </View>
                 {!exercise.isDuration && (
                 <View style={styles.e1rmBox}>
-                  <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
-                    {exercise.best1RM}
+                  {exercise.isNewPR && (
+                    <View style={[styles.prBadge, { backgroundColor: theme.colors.error }]}>
+                      <Text variant="labelSmall" style={{ color: theme.colors.onError, fontWeight: 'bold', fontSize: 10 }}>
+                        PR!
+                      </Text>
+                    </View>
+                  )}
+                  <Text variant="titleMedium" style={{ color: exercise.isNewPR ? theme.colors.error : theme.colors.primary, fontWeight: exercise.isNewPR ? 'bold' : undefined }}>
+                    {Math.round(exercise.best1RM)}
                   </Text>
                   <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
                     e1RM
@@ -450,7 +464,7 @@ export function WorkoutSummaryScreen({ navigation, route }: WorkoutSummaryScreen
         </Button>
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('Home')}
+          onPress={() => navigation.navigate('Main', { screen: 'Home' })}
           style={styles.bottomButton}
         >
           Done
@@ -519,6 +533,12 @@ const styles = StyleSheet.create({
   e1rmBox: {
     alignItems: 'center',
     paddingLeft: 16,
+  },
+  prBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginBottom: 2,
   },
   bottomBar: {
     flexDirection: 'row',

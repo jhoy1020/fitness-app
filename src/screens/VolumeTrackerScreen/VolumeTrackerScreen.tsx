@@ -1,22 +1,22 @@
 // Volume Tracker Screen - Shows sets per muscle with MEV/MAV/MRV zones
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Surface, useTheme, SegmentedButtons } from 'react-native-paper';
+import { Text, Surface, useTheme } from 'react-native-paper';
 import { useMesoCycle } from '../../context/MesoCycleContext';
 import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import { InfoTooltip, ABBREVIATIONS } from '../../components';
 import { statusColors, withAlpha } from '../../theme';
 import type { MuscleGroup, MuscleVolumeTracker } from '../../types';
+import type { RootScreenProps } from '../../navigation';
 
 interface VolumeTrackerScreenProps {
-  navigation: any;
+  navigation: RootScreenProps<'VolumeTracker'>['navigation'];
 }
 
 export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
   const theme = useTheme();
   const { state: mesoState, getVolumeStatus, getVolumeRecommendation } = useMesoCycle();
-  const [timeframe, setTimeframe] = useState<'week' | 'meso'>('week');
 
   // Get all muscle groups with volume
   const muscleGroups = Object.keys(VOLUME_LANDMARKS) as MuscleGroup[];
@@ -100,18 +100,6 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Timeframe Selector */}
-      <View style={styles.selectorContainer}>
-        <SegmentedButtons
-          value={timeframe}
-          onValueChange={(value) => setTimeframe(value as 'week' | 'meso')}
-          buttons={[
-            { value: 'week', label: 'This Week' },
-            { value: 'meso', label: 'Mesocycle Total' },
-          ]}
-        />
-      </View>
-
       {/* Summary Card */}
       <Surface style={styles.summaryCard} elevation={1}>
         <View style={styles.summaryRow}>
@@ -162,7 +150,7 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
       </View>
 
       {/* Volume List */}
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+      <ScrollView style={styles.list} contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
         {volumeData.map(item => {
           // Calculate positions for markers
           const mevPosition = (item.mev / item.mrv) * 100;
@@ -252,10 +240,6 @@ export function VolumeTrackerScreen({ navigation }: VolumeTrackerScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  selectorContainer: {
-    padding: 16,
-    paddingBottom: 8,
   },
   summaryCard: {
     marginHorizontal: 16,

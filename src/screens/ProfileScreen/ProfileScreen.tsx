@@ -2,7 +2,7 @@
 // User metrics and fitness profile
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, TextInput, Button, SegmentedButtons, Surface, useTheme, Divider, Switch, Portal, Dialog, Searchbar } from 'react-native-paper';
 import { useUser, useWorkout, useThemeMode } from '../../context';
 import { ProgressBar, InfoTooltip, ABBREVIATIONS } from '../../components';
@@ -13,9 +13,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
 import type { ActivityLevel, GoalType, OneRepMaxRecord } from '../../types';
+import type { TabScreenProps } from '../../navigation';
 
 interface ProfileScreenProps {
-  navigation: any;
+  navigation: TabScreenProps<'Profile'>['navigation'];
 }
 
 export function ProfileScreen({ navigation }: ProfileScreenProps) {
@@ -147,6 +148,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
     <ScrollView 
       style={{ backgroundColor: theme.colors.background }} 
       contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Profile Header with Stats */}
       <Surface style={styles.card} elevation={1}>
@@ -156,7 +158,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
           </View>
           <View style={styles.profileInfo}>
             <TextInput
-              mode="flat"
+              mode="outlined"
               label="Name"
               value={name}
               onChangeText={setName}
@@ -295,7 +297,9 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
                 </View>
                 <TouchableOpacity 
                   onPress={() => setDeleteConfirmRecord(record.id)}
-                  style={{ marginLeft: 12, padding: 4 }}
+                  style={{ marginLeft: 12, padding: 12, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+                  accessibilityLabel="Delete record"
+                  accessibilityRole="button"
                 >
                   <MaterialCommunityIcons name={AppIcons.close} size={20} color={theme.colors.error} />
                 </TouchableOpacity>
@@ -527,6 +531,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       {/* Add 1RM Dialog */}
       <Portal>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Dialog visible={show1RMDialog} onDismiss={() => setShow1RMDialog(false)}>
           <Dialog.Title>Add 1RM Record</Dialog.Title>
           <Dialog.Content>
@@ -642,6 +647,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
             </Button>
           </Dialog.Actions>
         </Dialog>
+        </KeyboardAvoidingView>
 
         {/* Delete Confirmation Dialog */}
         <Dialog visible={!!deleteConfirmRecord} onDismiss={() => setDeleteConfirmRecord(null)}>

@@ -7,11 +7,12 @@ import { useMesoCycle } from '../../context/MesoCycleContext';
 import { VOLUME_LANDMARKS, MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import type { MuscleGroup } from '../../types';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { RootScreenProps } from '../../navigation';
 import { statusColors } from '../../theme';
 import { AppIcons } from '../../theme/icons';
 
 interface MesoCycleScreenProps {
-  navigation: any;
+  navigation: RootScreenProps<'MesoCycle'>['navigation'];
 }
 
 export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
@@ -74,12 +75,12 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
   const handleEndMesocycle = () => {
     dispatch({ type: 'ABANDON_MESOCYCLE', payload: meso.id });
     setShowEndDialog(false);
-    navigation.navigate('Home');
+    navigation.navigate('Main', { screen: 'Home' });
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Program Header */}
         <Surface style={styles.headerCard} elevation={2}>
           <View style={styles.headerTop}>
@@ -219,11 +220,11 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
           <Text variant="titleMedium" style={styles.cardTitle}>Actions</Text>
           
           <TouchableOpacity 
-            style={styles.actionRow}
+            style={[styles.actionRow, meso.currentWeek >= meso.totalWeeks && { opacity: 0.4 }]}
             onPress={handleAdvanceWeek}
             disabled={meso.currentWeek >= meso.totalWeeks}
           >
-            <MaterialCommunityIcons name="skip-forward" size={20} color={theme.colors.onSurface} />
+            <MaterialCommunityIcons name="skip-forward" size={20} color={meso.currentWeek >= meso.totalWeeks ? theme.colors.outline : theme.colors.onSurface} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text variant="bodyLarge">Advance to Next Week</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
@@ -235,11 +236,11 @@ export function MesoCycleScreen({ navigation }: MesoCycleScreenProps) {
           <Divider style={{ marginVertical: 8 }} />
 
           <TouchableOpacity 
-            style={styles.actionRow}
+            style={[styles.actionRow, isDeloadWeek && { opacity: 0.4 }]}
             onPress={() => setShowDeloadDialog(true)}
             disabled={isDeloadWeek}
           >
-            <MaterialCommunityIcons name={AppIcons.rest} size={20} color={theme.colors.onSurface} />
+            <MaterialCommunityIcons name={AppIcons.rest} size={20} color={isDeloadWeek ? theme.colors.outline : theme.colors.onSurface} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text variant="bodyLarge">Trigger Deload</Text>
               <Text variant="bodySmall" style={{ color: theme.colors.outline }}>

@@ -2,7 +2,7 @@
 // 1. Name workout → 2. Add exercises → 3. Tap exercise to log sets → 4. Timer runs during rest
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import {
   Text,
   Button,
@@ -32,6 +32,9 @@ import { CardioFinisher, ExerciseTrackingType } from '../../types';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { withAlpha, spacing as sp, NARROW_SCREEN_WIDTH } from '../../theme';
 import { AppIcons } from '../../theme/icons';
+import type { RootScreenProps } from '../../navigation';
+import { PlateCalculatorDialog } from './PlateCalculatorDialog';
+import { WarmupSetsDialog } from './WarmupSetsDialog';
 
 // Types
 interface SetEntry {
@@ -53,6 +56,10 @@ interface WorkoutExercise {
   repsMin?: number;
   repsMax?: number;
   restSeconds?: number;
+  // Weight prescription from program
+  weightMode?: 'auto' | 'percentage' | 'fixed';
+  percentageOf1RM?: number;
+  fixedWeight?: number;
   // Superset grouping
   supersetGroupId?: string;
   supersetOrder?: number;
@@ -64,8 +71,8 @@ interface WorkoutExercise {
 }
 
 interface ActiveWorkoutScreenProps {
-  navigation: any;
-  route: any;
+  navigation: RootScreenProps<'ActiveWorkout'>['navigation'];
+  route: RootScreenProps<'ActiveWorkout'>['route'];
 }
 
 // Rest timer presets in seconds
@@ -231,7 +238,21 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
     const maxReps = exercise?.repsMax || 12;
     const targetReps = Math.floor((minReps + maxReps) / 2);
     
-    // First priority: Check for 1RM-based suggestion
+    // Percentage-of-1RM mode: compute weight from stored 1RM
+    if (exercise?.weightMode === 'percentage' && exercise.percentageOf1RM) {
+      const oneRMRecord = getOneRepMax(exercise.name);
+      if (oneRMRecord) {
+        const weight = Math.round((oneRMRecord.weight * exercise.percentageOf1RM / 100) / 5) * 5;
+        return { weight: Math.max(weight, 45), reps: targetReps, basedOn1RM: true };
+      }
+    }
+    
+    // Fixed weight mode: use the prescribed weight
+    if (exercise?.weightMode === 'fixed' && exercise.fixedWeight) {
+      return { weight: exercise.fixedWeight, reps: targetReps, basedOn1RM: false };
+    }
+    
+    // Auto mode: First priority — Check for 1RM-based suggestion
     if (exercise) {
       const oneRMWeight = getWeightFrom1RM(exercise.name, targetReps);
       if (oneRMWeight && !lastPerf) {
@@ -266,7 +287,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       
       // Load cardio finisher if present
       if (template.cardioFinisher) {
-        setCardioFinisher(template.cardioFinisher);
+        setCardioFinisher(template.cardioFinisher as CardioFinisher);
       }
       
       // Convert template to exercises with empty sets
@@ -285,6 +306,10 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
               repsMin: set.repsMin,
               repsMax: set.repsMax,
               restSeconds: set.restSeconds,
+              // Weight prescription
+              weightMode: set.weightMode,
+              percentageOf1RM: set.percentageOf1RM,
+              fixedWeight: set.fixedWeight,
               // Superset data
               supersetGroupId: set.supersetGroupId,
               supersetOrder: set.supersetOrder,
@@ -493,22 +518,6 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       ));
     }
     setShowWarmup(false);
-  };
-
-  // Get suggested weight based on last performance
-  const getSuggestedWeight = (exerciseName: string, targetReps: number) => {
-    const lastPerf = getLastPerformance(exerciseName);
-    if (!lastPerf) return null;
-    
-    // Calculate e1RM from last workout
-    const last1RM = calculate1RM_Epley(lastPerf.weight, lastPerf.reps);
-    
-    // Calculate target weight for given reps
-    const repPercentage = 100 - (targetReps * 2.5); // ~2.5% less per rep above 1
-    const targetPercentage = repPercentage / 100;
-    
-    const suggestedWeight = Math.round(last1RM * targetPercentage / 5) * 5; // Round to 5
-    return Math.max(suggestedWeight, 45); // Minimum bar weight
   };
 
   // Create superset pairing
@@ -992,7 +1001,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       </Surface>
 
       {/* Exercise List */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
         {/* Deload Mode Indicator */}
         {workoutState.deloadState.isInDeloadWeek && (
           <Surface style={{ backgroundColor: theme.colors.primaryContainer, borderRadius: 12, padding: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }} elevation={0}>
@@ -1069,7 +1078,9 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                         return next;
                       });
                     }}
-                    style={{ padding: 8 }}
+                    style={styles.exerciseActionBtn}
+                    accessibilityLabel="Toggle notes"
+                    accessibilityRole="button"
                   >
                     <MaterialCommunityIcons
                       name={exercise.notes || exercise.templateNotes ? 'note-text' : AppIcons.notes}
@@ -1081,33 +1092,43 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                   {!exercise.supersetGroupId ? (
                     <TouchableOpacity
                       onPress={() => handleCreateSuperset(exercise.id)}
-                      style={{ padding: 8 }}
+                      style={styles.exerciseActionBtn}
+                      accessibilityLabel="Create superset"
+                      accessibilityRole="button"
                     >
                       <MaterialCommunityIcons name={AppIcons.superSet} size={16} color={theme.colors.tertiary} />
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       onPress={() => handleRemoveSuperset(exercise.id)}
-                      style={{ padding: 8 }}
+                      style={styles.exerciseActionBtn}
+                      accessibilityLabel="Remove superset"
+                      accessibilityRole="button"
                     >
                       <MaterialCommunityIcons name="content-cut" size={16} color={theme.colors.error} />
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
                     onPress={() => handleShowSubstitutes(exercise.id)}
-                    style={{ padding: 8 }}
+                    style={styles.exerciseActionBtn}
+                    accessibilityLabel="Swap exercise"
+                    accessibilityRole="button"
                   >
                     <MaterialCommunityIcons name={AppIcons.swapExercise} size={16} color={theme.colors.onSurfaceVariant} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleShowHistory(exercise.name)}
-                    style={{ padding: 8 }}
+                    style={styles.exerciseActionBtn}
+                    accessibilityLabel="View history"
+                    accessibilityRole="button"
                   >
                     <MaterialCommunityIcons name="chart-bar" size={16} color={theme.colors.onSurfaceVariant} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setDeleteConfirmExercise(exercise.id)}
-                    style={{ padding: 8 }}
+                    style={styles.exerciseActionBtn}
+                    accessibilityLabel="Remove exercise"
+                    accessibilityRole="button"
                   >
                     <MaterialCommunityIcons name={AppIcons.close} size={16} color={theme.colors.error} />
                   </TouchableOpacity>
@@ -1298,6 +1319,8 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                           <TouchableOpacity 
                             onPress={() => setDeleteConfirmSet({ exerciseId: exercise.id, setId: set.id })}
                             style={styles.deleteCell}
+                            accessibilityLabel="Delete set"
+                            accessibilityRole="button"
                           >
                             <MaterialCommunityIcons name={AppIcons.close} size={14} color={theme.colors.error} />
                           </TouchableOpacity>
@@ -1465,6 +1488,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
 
       {/* Exercise Picker Dialog */}
       <Portal>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Dialog visible={showExercisePicker} onDismiss={() => setShowExercisePicker(false)} style={{ maxHeight: '85%' }}>
           <Dialog.Title>Add Exercise</Dialog.Title>
           <View style={{ paddingHorizontal: 24, paddingBottom: 8 }}>
@@ -1543,6 +1567,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
             <Button onPress={() => setShowExercisePicker(false)}>Cancel</Button>
           </Dialog.Actions>
         </Dialog>
+        </KeyboardAvoidingView>
       </Portal>
 
       {/* Exercise History Dialog */}
@@ -1614,81 +1639,20 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
       </Portal>
 
       {/* Warm-up Sets Dialog */}
-      <Portal>
-        <Dialog visible={showWarmup} onDismiss={() => setShowWarmup(false)}>
-          <Dialog.Title>Warm-up Sets</Dialog.Title>
-          <Dialog.ScrollArea style={{ maxHeight: 400 }}>
-            <ScrollView style={{ padding: 16 }}>
-              <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 16 }}>
-                Recommended warm-up progression:
-              </Text>
-              {warmupSets.map((warmup, idx) => (
-                <Surface key={idx} style={{ padding: 12, borderRadius: 8, marginBottom: 8 }} elevation={1}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View>
-                      <Text variant="titleMedium">{warmup.weight} lbs × {warmup.reps}</Text>
-                      <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                        {warmup.percentage}% • Rest {warmup.rest}s
-                      </Text>
-                    </View>
-                    <Text variant="bodySmall" style={{ color: theme.colors.primary }}>
-                      {formatPlatesDisplay(warmup.plates, false)}
-                    </Text>
-                  </View>
-                </Surface>
-              ))}
-            </ScrollView>
-          </Dialog.ScrollArea>
-          <Dialog.Actions>
-            <Button onPress={() => setShowWarmup(false)}>Close</Button>
-            <Button mode="contained" onPress={handleWarmupComplete}>Done Warming Up</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <WarmupSetsDialog
+        visible={showWarmup}
+        warmupSets={warmupSets}
+        onDismiss={() => setShowWarmup(false)}
+        onComplete={handleWarmupComplete}
+      />
 
       {/* Plate Calculator Dialog */}
-      <Portal>
-        <Dialog visible={showPlateCalc} onDismiss={() => setShowPlateCalc(false)}>
-          <Dialog.Title>Plate Calculator</Dialog.Title>
-          <Dialog.Content>
-            <TextInput
-              label="Target Weight (lbs)"
-              mode="outlined"
-              keyboardType="numeric"
-              value={plateCalcWeight}
-              onChangeText={setPlateCalcWeight}
-              style={{ marginBottom: 12 }}
-            />
-            <TextInput
-              label="Bar Weight (lbs)"
-              mode="outlined"
-              keyboardType="numeric"
-              value={plateCalcBar}
-              onChangeText={setPlateCalcBar}
-              style={{ marginBottom: 16 }}
-            />
-            {plateCalcWeight && parseFloat(plateCalcWeight) > 0 && (
-              <Surface style={{ padding: 16, borderRadius: 12 }} elevation={1}>
-                <Text variant="titleMedium" style={{ marginBottom: 8 }}>Each Side:</Text>
-                <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                  {formatPlatesDisplay(
-                    calculatePlates(parseFloat(plateCalcWeight), parseFloat(plateCalcBar) || 45, false),
-                    false
-                  )}
-                </Text>
-                {!calculatePlates(parseFloat(plateCalcWeight), parseFloat(plateCalcBar) || 45, false).achievable && (
-                  <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8 }}>
-                    Can't hit exact weight. Closest: {calculatePlates(parseFloat(plateCalcWeight), parseFloat(plateCalcBar) || 45, false).totalWeight} lbs
-                  </Text>
-                )}
-              </Surface>
-            )}
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setShowPlateCalc(false)}>Close</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <PlateCalculatorDialog
+        visible={showPlateCalc}
+        onDismiss={() => setShowPlateCalc(false)}
+        initialWeight={plateCalcWeight}
+        initialBarWeight={plateCalcBar}
+      />
 
       {/* Superset Picker Dialog */}
       <Portal>
@@ -1906,7 +1870,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
                 // Reset state so beforeRemove doesn't save
                 setExercises([]);
                 setIsNaming(true);
-                navigation.navigate('Home');
+                navigation.navigate('Main', { screen: 'Home' });
               }}
             >
               Cancel Workout
@@ -1991,6 +1955,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  exerciseActionBtn: {
+    padding: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   exerciseExpanded: {
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -2005,8 +1976,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 12,
     borderRadius: 16,
+    minHeight: 44,
   },
   setsTable: {
     marginBottom: 12,
@@ -2035,8 +2007,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deleteCell: {
-    width: 40,
+    width: 44,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   addSetRow: {
     flexDirection: 'row',

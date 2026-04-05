@@ -2,7 +2,7 @@
 // Sets up providers, navigation, and theme
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, useColorScheme, useWindowDimensions, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, StyleSheet, useColorScheme, useWindowDimensions, TouchableOpacity, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator, BottomTabBar } from '@react-navigation/bottom-tabs';
@@ -14,6 +14,7 @@ import { lightTheme, darkTheme, NARROW_SCREEN_WIDTH, withAlpha, spacing } from '
 import { AppIcons } from './src/theme/icons';
 import { WorkoutProvider, UserProvider, TimerProvider, MesoCycleProvider, ThemeProvider, useThemeMode } from './src/context';
 import { initDatabase, seedExercises, EXERCISE_LIBRARY } from './src/services/db';
+import type { RootStackParamList, MainTabParamList } from './src/navigation';
 import {
   HomeScreen,
   ActiveWorkoutScreen,
@@ -28,30 +29,6 @@ import {
   WorkoutDetailScreen,
   OneRepMaxTestScreen,
 } from './src/screens';
-
-// Navigation types
-type RootStackParamList = {
-  Main: undefined;
-  ActiveWorkout: undefined;
-  WorkoutDetail: { workoutId: string };
-  WorkoutSummary: { workout: any };
-  Templates: undefined;
-  CreateTemplate: undefined;
-  TemplateDetail: { templateId: string };
-  Programs: undefined;
-  CreateProgram: { programId?: string } | undefined;
-  VolumeTracker: undefined;
-  MesoCycle: undefined;
-  OneRepMaxTest: { exerciseName?: string };
-};
-
-type MainTabParamList = {
-  Home: undefined;
-  Programs: undefined;
-  History: undefined;
-  Progress: undefined;
-  Profile: undefined;
-};
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -358,9 +335,15 @@ function AppContent() {
         <WorkoutProvider>
           <TimerProvider>
             <MesoCycleProvider>
-              <NavigationContainer>
-                <RootNavigator />
-              </NavigationContainer>
+              <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+              >
+                <NavigationContainer>
+                  <RootNavigator />
+                </NavigationContainer>
+              </KeyboardAvoidingView>
             </MesoCycleProvider>
           </TimerProvider>
         </WorkoutProvider>

@@ -1,7 +1,7 @@
 // Create Program Screen - Build custom workout programs
 
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { 
   Text, 
   Surface, 
@@ -17,17 +17,19 @@ import {
   Switch
 } from 'react-native-paper';
 import { useMesoCycle } from '../../context/MesoCycleContext';
+import { useUser } from '../../context/UserContext';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
-import type { MuscleGroup, ProgramDayTemplate, ProgramExerciseTemplate, TrainingProgram, DayType, CardioFinisher, RecoverySuggestion } from '../../types';
+import type { MuscleGroup, ProgramDayTemplate, ProgramExerciseTemplate, TrainingProgram, DayType, CardioFinisher, RecoverySuggestion, WeightMode } from '../../types';
 import { MUSCLE_GROUP_LABELS } from '../../utils/constants/constants';
 import { CARDIO_FINISHERS, RECOVERY_LIBRARY } from '../../data/activities/activities';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
+import type { RootScreenProps } from '../../navigation';
 
 interface CreateProgramScreenProps {
-  navigation: any;
-  route?: any;
+  navigation: RootScreenProps<'CreateProgram'>['navigation'];
+  route?: RootScreenProps<'CreateProgram'>['route'];
 }
 
 const MUSCLE_GROUPS: MuscleGroup[] = [
@@ -64,11 +66,15 @@ interface ExerciseEntry {
   supersetGroupId?: string;
   supersetOrder?: number;
   notes?: string;
+  weightMode?: WeightMode;
+  percentageOf1RM?: number;
+  fixedWeight?: number;
 }
 
 export function CreateProgramScreen({ navigation, route }: CreateProgramScreenProps) {
   const theme = useTheme();
   const { dispatch, state: mesoState } = useMesoCycle();
+  const { getOneRepMax, state: userState } = useUser();
 
   // Edit mode: check for programId in route params
   const editingProgramId = route?.params?.programId as string | undefined;
@@ -114,6 +120,9 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
   const [newRir, setNewRir] = useState('2');
   const [newRest, setNewRest] = useState('120');
   const [newExerciseNotes, setNewExerciseNotes] = useState('');
+  const [newWeightMode, setNewWeightMode] = useState<WeightMode>('auto');
+  const [newPercentage, setNewPercentage] = useState('');
+  const [newFixedWeight, setNewFixedWeight] = useState('');
 
   // Edit exercise state — when set, the dialog is in edit mode
   const [editingExerciseRef, setEditingExerciseRef] = useState<{ dayId: string; exerciseId: string } | null>(null);
@@ -149,6 +158,9 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
           supersetGroupId: ex.supersetGroupId,
           supersetOrder: ex.supersetOrder,
           notes: ex.notes,
+          weightMode: ex.weightMode,
+          percentageOf1RM: ex.percentageOf1RM,
+          fixedWeight: ex.fixedWeight,
         })),
         cardioFinisher: day.cardioFinisher,
         notes: day.notes,
@@ -319,6 +331,9 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
     setNewRir('2');
     setNewRest('120');
     setNewExerciseNotes('');
+    setNewWeightMode('auto');
+    setNewPercentage('');
+    setNewFixedWeight('');
   };
 
   // Open edit exercise dialog (pre-populated)
@@ -336,6 +351,9 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
     setNewRir(String(exercise.rirTarget));
     setNewRest(String(exercise.restSeconds));
     setNewExerciseNotes(exercise.notes || '');
+    setNewWeightMode(exercise.weightMode || 'auto');
+    setNewPercentage(exercise.percentageOf1RM ? String(exercise.percentageOf1RM) : '');
+    setNewFixedWeight(exercise.fixedWeight ? String(exercise.fixedWeight) : '');
   };
 
   // Select an exercise from the library
@@ -358,6 +376,9 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
       rirTarget: parseInt(newRir) || 2,
       restSeconds: parseInt(newRest) || 120,
       notes: newExerciseNotes.trim() || undefined,
+      weightMode: newWeightMode !== 'auto' ? newWeightMode : undefined,
+      percentageOf1RM: newWeightMode === 'percentage' && newPercentage ? parseFloat(newPercentage) : undefined,
+      fixedWeight: newWeightMode === 'fixed' && newFixedWeight ? parseFloat(newFixedWeight) : undefined,
     };
 
     if (editingExerciseRef) {
@@ -418,6 +439,9 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
         notes: e.notes,
         supersetGroupId: e.supersetGroupId,
         supersetOrder: e.supersetOrder,
+        weightMode: e.weightMode,
+        percentageOf1RM: e.percentageOf1RM,
+        fixedWeight: e.fixedWeight,
       })) : undefined,
       cardioFinisher: day.cardioFinisher,
       notes: day.notes,
@@ -469,8 +493,24 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
           startDate: new Date().toISOString(),
         },
       });
-      navigation.navigate('Home');
+      navigation.navigate('Main', { screen: 'Home' });
     }
+  };
+
+  // Helper: format weight prescription for exercise row display
+  const formatWeightLabel = (ex: ExerciseEntry): string | null => {
+    if (ex.weightMode === 'percentage' && ex.percentageOf1RM) {
+      const record = getOneRepMax(ex.exerciseName);
+      if (record) {
+        const resolved = Math.round((record.weight * ex.percentageOf1RM / 100) / 5) * 5;
+        return `${ex.percentageOf1RM}% 1RM (${resolved} ${record.unit})`;
+      }
+      return `${ex.percentageOf1RM}% 1RM`;
+    }
+    if (ex.weightMode === 'fixed' && ex.fixedWeight) {
+      return `${ex.fixedWeight} ${userState.units === 'metric' ? 'kg' : 'lbs'}`;
+    }
+    return null;
   };
 
   // All weeks must have days, and workout days need exercises
@@ -497,7 +537,7 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Program Details */}
         <Surface style={styles.card} elevation={1}>
           <Text variant="titleMedium" style={styles.sectionTitle}>Program Details</Text>
@@ -545,17 +585,37 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
           <Text variant="labelLarge" style={[styles.label, { marginTop: 16 }]}>Split Type</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.chipRow}>
-              {SPLIT_OPTIONS.map(s => (
-                <Chip
-                  key={s}
-                  selected={split === s}
-                  onPress={() => setSplit(s)}
-                  style={styles.chip}
-                  showSelectedCheck={false}
-                >
-                  {s}
-                </Chip>
-              ))}
+              {SPLIT_OPTIONS.map(s => {
+                const isSelected = split === s;
+                return (
+                  <Chip
+                    key={s}
+                    selected={isSelected}
+                    onPress={() => setSplit(s)}
+                    showSelectedCheck={false}
+                    style={[
+                      styles.chip,
+                      isSelected && {
+                        backgroundColor: theme.colors.primaryContainer,
+                        borderColor: theme.colors.primary,
+                        borderWidth: 1.5,
+                      },
+                      !isSelected && {
+                        borderColor: theme.colors.outlineVariant,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    textStyle={isSelected ? {
+                      color: theme.colors.onPrimaryContainer,
+                      fontWeight: '600',
+                    } : {
+                      color: theme.colors.onSurfaceVariant,
+                    }}
+                  >
+                    {s}
+                  </Chip>
+                );
+              })}
             </View>
           </ScrollView>
         </Surface>
@@ -673,7 +733,7 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
                       color={day.dayType === 'rest' ? theme.colors.surfaceVariant : day.dayType === 'cardio' ? theme.colors.secondary : day.dayType === 'active_recovery' ? theme.colors.tertiary : theme.colors.primary}
                     />
                     <TextInput
-                      mode="flat"
+                      mode="outlined"
                       value={day.name}
                       onChangeText={(v) => handleUpdateDayName(day.id, v)}
                       style={styles.dayNameInput}
@@ -792,6 +852,11 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
                                       <Text variant="bodySmall" style={{ color: theme.colors.outline, marginLeft: 28 }}>
                                         {groupEx.sets} sets × {groupEx.repsMin}-{groupEx.repsMax} reps • RIR {groupEx.rirTarget} • {groupEx.restSeconds}s rest
                                       </Text>
+                                      {formatWeightLabel(groupEx) && (
+                                        <Text variant="bodySmall" style={{ color: theme.colors.primary, marginLeft: 28, fontWeight: '600' }}>
+                                          {formatWeightLabel(groupEx)}
+                                        </Text>
+                                      )}
                                       {groupEx.notes ? (
                                         <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 28, marginTop: 2 }}>
                                           <MaterialCommunityIcons name={AppIcons.notes} size={12} color={theme.colors.outline} style={{ marginRight: 4 }} />
@@ -829,6 +894,11 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
                                 <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
                                   {exercise.sets} sets × {exercise.repsMin}-{exercise.repsMax} reps • RIR {exercise.rirTarget} • {exercise.restSeconds}s rest
                                 </Text>
+                                {formatWeightLabel(exercise) && (
+                                  <Text variant="bodySmall" style={{ color: theme.colors.primary, fontWeight: '600' }}>
+                                    {formatWeightLabel(exercise)}
+                                  </Text>
+                                )}
                                 {exercise.notes ? (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                                     <MaterialCommunityIcons name={AppIcons.notes} size={12} color={theme.colors.outline} style={{ marginRight: 4 }} />
@@ -969,6 +1039,7 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
 
       {/* Add Exercise Dialog */}
       <Portal>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Dialog 
           visible={showAddExercise} 
           onDismiss={() => setShowAddExercise(false)}
@@ -976,7 +1047,7 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
         >
           <Dialog.Title>{isEditingExercise ? 'Edit Exercise' : 'Add Exercise'}</Dialog.Title>
           <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
-            <ScrollView style={{ paddingHorizontal: 24 }}>
+            <ScrollView style={{ paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
               {/* Exercise Search */}
               <TextInput
                 mode="outlined"
@@ -1105,6 +1176,75 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
                     placeholder="e.g., 1s pause at bottom, controlled negative"
                     style={{ marginTop: 8 }}
                   />
+
+                  {/* Weight Prescription */}
+                  <Text variant="labelLarge" style={{ marginTop: 16, marginBottom: 8 }}>Weight</Text>
+                  <SegmentedButtons
+                    value={newWeightMode}
+                    onValueChange={(v) => setNewWeightMode(v as WeightMode)}
+                    buttons={[
+                      { value: 'auto', label: 'Auto' },
+                      { value: 'percentage', label: '% of 1RM' },
+                      { value: 'fixed', label: 'Fixed' },
+                    ]}
+                    style={{ marginBottom: 12 }}
+                  />
+
+                  {newWeightMode === 'percentage' && (
+                    <View>
+                      <View style={styles.row}>
+                        <TextInput
+                          mode="outlined"
+                          label="% of 1RM"
+                          value={newPercentage}
+                          onChangeText={setNewPercentage}
+                          keyboardType="number-pad"
+                          dense
+                          style={{ flex: 1, marginRight: 8 }}
+                          placeholder="e.g., 75"
+                        />
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                          {(() => {
+                            const record = getOneRepMax(newExerciseName);
+                            const pct = parseFloat(newPercentage);
+                            if (record && pct > 0) {
+                              const resolved = Math.round((record.weight * pct / 100) / 5) * 5;
+                              return (
+                                <Surface style={{ padding: 8, borderRadius: 8, backgroundColor: theme.colors.primaryContainer }} elevation={0}>
+                                  <Text variant="labelSmall" style={{ color: theme.colors.onPrimaryContainer }}>
+                                    = {resolved} {record.unit}
+                                  </Text>
+                                  <Text variant="labelSmall" style={{ color: theme.colors.onPrimaryContainer, opacity: 0.7 }}>
+                                    1RM: {record.weight} {record.unit}
+                                  </Text>
+                                </Surface>
+                              );
+                            }
+                            if (pct > 0 && !record) {
+                              return (
+                                <Text variant="bodySmall" style={{ color: theme.colors.outline, fontStyle: 'italic' }}>
+                                  No 1RM for this exercise — add in Profile
+                                </Text>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {newWeightMode === 'fixed' && (
+                    <TextInput
+                      mode="outlined"
+                      label={`Weight (${userState.units === 'metric' ? 'kg' : 'lbs'})`}
+                      value={newFixedWeight}
+                      onChangeText={setNewFixedWeight}
+                      keyboardType="number-pad"
+                      dense
+                      placeholder="e.g., 185"
+                    />
+                  )}
                 </>
               ) : (
                 <Text variant="bodySmall" style={{ color: theme.colors.outline, textAlign: 'center' }}>
@@ -1121,6 +1261,7 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
             </Button>
           </Dialog.Actions>
         </Dialog>
+        </KeyboardAvoidingView>
 
         {/* Delete Day Confirmation Dialog */}
         <Dialog visible={!!deleteConfirmDay} onDismiss={() => setDeleteConfirmDay(null)}>

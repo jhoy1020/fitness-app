@@ -19,6 +19,7 @@ import { generate1RMTestProtocol, type OneRMTestProtocol, type AttemptSet } from
 import { formatPlatesDisplay } from '../../utils/plateCalculator/plateCalculator';
 import { withAlpha } from '../../theme';
 import { AppIcons } from '../../theme/icons';
+import type { RootScreenProps } from '../../navigation';
 
 // ─── Supported exercises ──────────────────────────────────
 
@@ -32,8 +33,8 @@ const TESTABLE_EXERCISES = [
 // ─── Component ────────────────────────────────────────────
 
 interface OneRepMaxTestScreenProps {
-  navigation: any;
-  route?: { params?: { exerciseName?: string } };
+  navigation: RootScreenProps<'OneRepMaxTest'>['navigation'];
+  route?: RootScreenProps<'OneRepMaxTest'>['route'];
 }
 
 export function OneRepMaxTestScreen({ navigation, route }: OneRepMaxTestScreenProps) {
@@ -422,6 +423,7 @@ export function OneRepMaxTestScreen({ navigation, route }: OneRepMaxTestScreenPr
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Title */}
       <View style={styles.header}>

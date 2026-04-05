@@ -2,7 +2,7 @@
 // Circular countdown timer with controls
 
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Text, Surface, useTheme, Button } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTimer } from '../../context';
@@ -13,19 +13,68 @@ interface RestTimerProps {
   onComplete?: () => void;
 }
 
+/**
+ * View-based circular progress ring.
+ * Uses two masked half-circles rotated by the progress value.
+ */
+function CircleProgress({ size, strokeWidth, progress, color, bgColor }: {
+  size: number; strokeWidth: number; progress: number; color: string; bgColor: string;
+}) {
+  const half = size / 2;
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+
+  // Each half rotates from 0° (empty) to 180° (full)
+  const firstHalfDeg = Math.min(clampedProgress * 360, 180);
+  const secondHalfDeg = Math.max((clampedProgress * 360) - 180, 0);
+
+  const baseCircle = {
+    width: size,
+    height: size,
+    borderRadius: half,
+    borderWidth: strokeWidth,
+  };
+
+  const halfClip = {
+    position: 'absolute' as const,
+    width: half,
+    height: size,
+    overflow: 'hidden' as const,
+  };
+
+  const innerArc = {
+    width: size,
+    height: size,
+    borderRadius: half,
+    borderWidth: strokeWidth,
+    borderColor: color,
+    position: 'absolute' as const,
+  };
+
+  return (
+    <View style={{ width: size, height: size }}>
+      {/* Background ring */}
+      <View style={[baseCircle, { borderColor: bgColor, position: 'absolute' }]} />
+      {/* Right half (0–180°) */}
+      <View style={[halfClip, { left: half }]}>
+        <View style={[innerArc, { left: -half, transform: [{ rotate: `${firstHalfDeg}deg` }] }]} />
+      </View>
+      {/* Left half (180–360°) */}
+      <View style={[halfClip, { left: 0 }]}>
+        <View style={[innerArc, { left: 0, transform: [{ rotate: `${secondHalfDeg}deg` }] }]} />
+      </View>
+    </View>
+  );
+}
+
 export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
   const theme = useTheme();
   const { state, pauseTimer, resumeTimer, stopTimer, adjustTimer } = useTimer();
 
   const { isRunning, timeRemaining, totalTime } = state;
   const progress = totalTime > 0 ? timeRemaining / totalTime : 0;
-  
-  // Calculate circle properties
+
   const size = compact ? 80 : 200;
   const strokeWidth = compact ? 4 : 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - progress);
 
   // Handle completion
   React.useEffect(() => {
@@ -56,14 +105,18 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
           <View style={styles.compactButtons}>
             <TouchableOpacity
               onPress={isRunning ? pauseTimer : resumeTimer}
-              style={{ padding: 8 }}
+              style={styles.compactBtn}
+              accessibilityLabel={isRunning ? 'Pause timer' : 'Resume timer'}
+              accessibilityRole="button"
               testID={isRunning ? 'pause-button' : 'play-button'}
             >
               <MaterialCommunityIcons name={isRunning ? 'pause' : 'play'} size={18} color={theme.colors.onSurfaceVariant} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={stopTimer}
-              style={{ padding: 8 }}
+              style={styles.compactBtn}
+              accessibilityLabel="Stop timer"
+              accessibilityRole="button"
               testID="stop-button"
             >
               <MaterialCommunityIcons name="stop" size={18} color={theme.colors.onSurfaceVariant} />
@@ -77,30 +130,13 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
   return (
     <Surface style={styles.container} elevation={2}>
       <View style={styles.timerCircle}>
-        <svg width={size} height={size} style={styles.svg}>
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={theme.colors.surfaceVariant}
-            strokeWidth={strokeWidth}
-          />
-          {/* Progress circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={getTimerColor()}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          />
-        </svg>
+        <CircleProgress
+          size={size}
+          strokeWidth={strokeWidth}
+          progress={progress}
+          color={getTimerColor()}
+          bgColor={theme.colors.surfaceVariant}
+        />
         <View style={styles.timerText}>
           <Text variant="displayMedium" style={{ color: getTimerColor() }}>
             {formatDuration(timeRemaining)}
@@ -117,7 +153,9 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
           <TouchableOpacity
             key={seconds}
             onPress={() => adjustTimer(seconds)}
-            style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 20, marginHorizontal: 4 }}
+            style={[styles.adjustBtn, { borderColor: theme.colors.outline }]}
+            accessibilityLabel={`Adjust timer ${seconds > 0 ? '+' : ''}${seconds} seconds`}
+            accessibilityRole="button"
           >
             <Text>{seconds < 0 ? `${seconds}s` : `+${seconds}s`}</Text>
           </TouchableOpacity>
@@ -128,19 +166,25 @@ export function RestTimer({ compact = false, onComplete }: RestTimerProps) {
       <View style={styles.controlButtons}>
         <TouchableOpacity
           onPress={() => adjustTimer(totalTime - timeRemaining)}
-          style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 24 }}
+          style={[styles.controlBtn, { borderColor: theme.colors.outline }]}
+          accessibilityLabel="Reset timer"
+          accessibilityRole="button"
         >
           <MaterialCommunityIcons name="refresh" size={20} color={theme.colors.onSurfaceVariant} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={isRunning ? pauseTimer : resumeTimer}
-          style={{ padding: 16, backgroundColor: theme.colors.primary, borderRadius: 32, marginHorizontal: 16 }}
+          style={[styles.playPauseBtn, { backgroundColor: theme.colors.primary }]}
+          accessibilityLabel={isRunning ? 'Pause timer' : 'Resume timer'}
+          accessibilityRole="button"
         >
           <MaterialCommunityIcons name={isRunning ? 'pause' : 'play'} size={28} color={theme.colors.onPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={stopTimer}
-          style={{ padding: 12, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: 24 }}
+          style={[styles.controlBtn, { borderColor: theme.colors.outline }]}
+          accessibilityLabel="Skip rest timer"
+          accessibilityRole="button"
         >
           <MaterialCommunityIcons name="skip-next" size={20} color={theme.colors.onSurfaceVariant} />
         </TouchableOpacity>
@@ -156,15 +200,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timerCircle: {
-    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  svg: {
-    transform: [{ rotateZ: '0deg' }],
-  },
   timerText: {
-    position: 'absolute',
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -173,11 +213,38 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 8,
   },
+  adjustBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: 20,
+    minHeight: 44,
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   controlButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
     gap: 16,
+  },
+  controlBtn: {
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 24,
+    minHeight: 48,
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playPauseBtn: {
+    padding: 16,
+    borderRadius: 32,
+    minHeight: 56,
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   compactContainer: {
     borderRadius: 12,
@@ -190,6 +257,13 @@ const styles = StyleSheet.create({
   },
   compactButtons: {
     flexDirection: 'row',
+  },
+  compactBtn: {
+    padding: 10,
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   miniCircle: {
     width: 60,

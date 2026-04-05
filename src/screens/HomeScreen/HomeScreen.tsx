@@ -2,7 +2,7 @@
 // Dashboard with quick actions and recent workouts
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, TextInput, ProgressBar, IconButton } from 'react-native-paper';
 import { TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -18,32 +18,20 @@ import { DeloadBanner } from '../../components/DeloadBanner';
 import { withAlpha, statusColors, spacing as sp } from '../../theme';
 import { AppIcons } from '../../theme/icons';
 import type { Exercise, WorkoutSet, Workout, MuscleGroup, RecoverySuggestion, CardioType } from '../../types';
+import type { TabScreenProps } from '../../navigation';
+import { QuickStatsRow, type ActivityStats } from './QuickStatsRow';
+import { QuickStartTemplates } from './QuickStartTemplates';
+import { WeeklyVolumeCard } from './WeeklyVolumeCard';
+import { RecentPRsCard, type PREntry } from './RecentPRsCard';
+import { ProgramCompletionDialog, type CompletedProgramStats } from './ProgramCompletionDialog';
+import { LogCardioDialog, type CardioWorkoutData } from './LogCardioDialog';
+import { EditWorkoutDialog } from '../../components';
+import type { EditableSet } from '../../components';
 
-interface EditableSet {
-  id: string;
-  exerciseName: string;
-  muscleGroup: string;
-  weight: string;
-  reps: string;
-  isNew?: boolean;
-}
-
-// Cardio type options with display names and emoji
-const CARDIO_OPTIONS: { type: CardioType; label: string; emoji: string }[] = [
-  { type: 'running', label: 'Running', emoji: '🏃' },
-  { type: 'cycling', label: 'Cycling', emoji: '🚴' },
-  { type: 'walking', label: 'Walking', emoji: '🚶' },
-  { type: 'swimming', label: 'Swimming', emoji: '🏊' },
-  { type: 'rowing', label: 'Rowing', emoji: '🚣' },
-  { type: 'elliptical', label: 'Elliptical', emoji: '⭕' },
-  { type: 'stair_climber', label: 'Stair Climber', emoji: '🪜' },
-  { type: 'hiit', label: 'HIIT', emoji: '⚡' },
-  { type: 'jump_rope', label: 'Jump Rope', emoji: '🪢' },
-  { type: 'other', label: 'Other', emoji: '🏋️' },
-];
+import { CARDIO_OPTIONS } from './LogCardioDialog';
 
 interface HomeScreenProps {
-  navigation: any;
+  navigation: TabScreenProps<'Home'>['navigation'];
 }
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
@@ -56,10 +44,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editName, setEditName] = useState('');
   const [editSets, setEditSets] = useState<EditableSet[]>([]);
-  const [showAddSet, setShowAddSet] = useState(false);
-  const [newSetExercise, setNewSetExercise] = useState('');
-  const [newSetWeight, setNewSetWeight] = useState('');
-  const [newSetReps, setNewSetReps] = useState('');
   
   // Add past workout state
   const [showAddWorkout, setShowAddWorkout] = useState(false);
@@ -71,15 +55,12 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const [newWkSetWeight, setNewWkSetWeight] = useState('');
   const [newWkSetReps, setNewWkSetReps] = useState('');
   
-  // Exercise search state
-  const [exerciseSearch, setExerciseSearch] = useState('');
-  const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
+  // Exercise search state (for add-past-workout dialog)
   const [newWkExerciseSearch, setNewWkExerciseSearch] = useState('');
   const [showNewWkExerciseDropdown, setShowNewWkExerciseDropdown] = useState(false);
   
   // Delete confirmation state
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null);
-  const [deleteConfirmSet, setDeleteConfirmSet] = useState<string | null>(null);
   const [deleteConfirmNewSet, setDeleteConfirmNewSet] = useState<string | null>(null);
   
   // Log Cardio Workout state
@@ -117,16 +98,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     totalVolume: number;
   } | null>(null);
   
-  // Filtered exercises for search
-  const filteredExercises = useMemo(() => {
-    const search = exerciseSearch.toLowerCase().trim();
-    if (!search) return EXERCISE_LIBRARY.slice(0, 10);
-    return EXERCISE_LIBRARY.filter(ex => 
-      ex.name.toLowerCase().includes(search) ||
-      ex.muscleGroup.toLowerCase().includes(search)
-    ).slice(0, 10);
-  }, [exerciseSearch]);
-  
+  // Filtered exercises for search (add-past-workout dialog)
   const filteredNewWkExercises = useMemo(() => {
     const search = newWkExerciseSearch.toLowerCase().trim();
     if (!search) return EXERCISE_LIBRARY.slice(0, 10);
@@ -235,40 +207,6 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       weight: s.weight?.toString() || '',
       reps: s.reps?.toString() || '',
     })));
-    setShowAddSet(false);
-    setNewSetExercise('');
-    setNewSetWeight('');
-    setNewSetReps('');
-  };
-
-  const handleUpdateSet = (setId: string, field: 'weight' | 'reps', value: string) => {
-    setEditSets(prev => prev.map(s => 
-      s.id === setId ? { ...s, [field]: value } : s
-    ));
-  };
-
-  const handleDeleteSet = (setId: string) => {
-    setEditSets(prev => prev.filter(s => s.id !== setId));
-  };
-
-  const handleAddNewSet = () => {
-    if (!newSetExercise || !newSetWeight || !newSetReps) return;
-    
-    const exercise = EXERCISE_LIBRARY.find(e => e.name === newSetExercise);
-    const newSet: EditableSet = {
-      id: Date.now().toString() + Math.random(),
-      exerciseName: newSetExercise,
-      muscleGroup: exercise?.muscleGroup || 'other',
-      weight: newSetWeight,
-      reps: newSetReps,
-      isNew: true,
-    };
-    
-    setEditSets(prev => [...prev, newSet]);
-    setShowAddSet(false);
-    setNewSetExercise('');
-    setNewSetWeight('');
-    setNewSetReps('');
   };
 
   const handleSaveEdit = () => {
@@ -483,6 +421,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         supersetGroupId: ex.supersetGroupId,
         supersetOrder: ex.supersetOrder,
         notes: ex.notes,
+        weightMode: ex.weightMode,
+        percentageOf1RM: ex.percentageOf1RM,
+        fixedWeight: ex.fixedWeight,
       })) : [],
       // For cardio days
       cardioActivities: nextDay.cardioActivities,
@@ -756,31 +697,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Quick Stats Row */}
-        <View style={styles.topStatsRow}>
-          <Surface style={styles.streakCard} elevation={2}>
-            <MaterialCommunityIcons name={AppIcons.warmup} size={28} color={theme.colors.primary} />
-            <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-              {activityStats.workoutDays}
-            </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Workouts</Text>
-          </Surface>
-          <Surface style={styles.streakCard} elevation={2}>
-            <MaterialCommunityIcons name={AppIcons.rest} size={28} color={theme.colors.secondary} />
-            <Text variant="headlineSmall" style={{ color: theme.colors.secondary }}>
-              {activityStats.restDays}
-            </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Rest Days</Text>
-          </Surface>
-          <Surface style={styles.streakCard} elevation={2}>
-            <MaterialCommunityIcons name={AppIcons.recovery} size={28} color={theme.colors.tertiary} />
-            <Text variant="headlineSmall" style={{ color: theme.colors.tertiary }}>
-              {activityStats.recoveryDays}
-            </Text>
-            <Text variant="labelSmall" style={{ color: theme.colors.outline }}>Recovery</Text>
-          </Surface>
-        </View>
+        <QuickStatsRow stats={activityStats} />
 
         {/* Week Calendar */}
         <Surface style={styles.weekCalendar} elevation={1}>
@@ -857,76 +776,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           )}
           
           {/* Action Buttons Row - hidden when program is active (ProgramCard handles it) */}
-          {!activityStats.recommendation && !mesoState.activeMesoCycle && (
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
-              <Button
-              mode="contained"
-              onPress={() => navigation.navigate('ActiveWorkout')}
-              style={{ flex: 1 }}
-              icon="dumbbell"
-              compact
-            >
-              Workout
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => {
-                setRestDayInfo({ name: 'Rest Day', dayType: 'rest' });
-                setShowRestDayDialog(true);
-              }}
-              style={{ flex: 1 }}
-              icon={AppIcons.rest}
-              compact
-            >
-              Rest
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => {
-                // Get muscle groups from recent workouts (last 3 days)
-                const threeDaysAgo = new Date();
-                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-                const recentWorkouts = workoutState.workoutHistory.filter(w => 
-                  w.dayType !== 'rest' && 
-                  w.dayType !== 'cardio' && 
-                  w.dayType !== 'active_recovery' &&
-                  new Date(w.date) >= threeDaysAgo
-                );
-                
-                // Extract muscle groups from recent workout sets
-                const trainedMuscles: MuscleGroup[] = [];
-                recentWorkouts.forEach(w => {
-                  w.sets?.forEach(set => {
-                    const muscle = set.muscleGroup?.toLowerCase() as MuscleGroup;
-                    if (muscle && !trainedMuscles.includes(muscle)) {
-                      trainedMuscles.push(muscle);
-                    }
-                  });
-                });
-                
-                // Get smart suggestions based on trained muscles
-                const smartSuggestions = getRecoverySuggestions(trainedMuscles, 5);
-                
-                setRecoveryInfo({ 
-                  name: 'Active Recovery', 
-                  dayType: 'active_recovery',
-                  trainedMuscles,
-                  smartSuggestions,
-                });
-                setSelectedRecoveryActivities(new Set());
-                setShowRecoveryDialog(true);
-              }}
-              style={{ flex: 1 }}
-              icon={AppIcons.recovery}
-              compact
-            >
-              Recovery
-            </Button>
-          </View>
-          )}
-          
-          {/* Action Buttons Row - when recommendation is shown, hidden when program active */}
-          {activityStats.recommendation && !mesoState.activeMesoCycle && (
+          {!mesoState.activeMesoCycle && (
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
               <Button
                 mode="contained"
@@ -1082,62 +932,15 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         <DeloadBanner />
 
         {/* Quick Start Templates - Always show */}
-        <Surface style={styles.quickTemplates} elevation={1}>
-          <Text variant="titleMedium" style={{ marginBottom: 12 }}>
-            <MaterialCommunityIcons name="lightning-bolt" size={18} color={theme.colors.onSurface} />{' '}Quick Start
-          </Text>
-          <View style={styles.templateRow}>
-            <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.primary, 0.15) }]}
-              onPress={() => navigation.navigate('ActiveWorkout', { 
-                templateWorkout: { name: 'Push Day', sets: [
-                  { exerciseName: 'Bench Press', muscleGroup: 'chest' },
-                  { exerciseName: 'Overhead Press', muscleGroup: 'shoulders' },
-                  { exerciseName: 'Incline Dumbbell Press', muscleGroup: 'chest' },
-                  { exerciseName: 'Tricep Pushdowns', muscleGroup: 'triceps' },
-                ]}
-              })}
-            >
-              <MaterialCommunityIcons name={AppIcons.workout} size={18} color={theme.colors.primary} />
-              <Text variant="labelMedium" style={{ color: theme.colors.primary }}>Push</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.error, 0.15) }]}
-              onPress={() => navigation.navigate('ActiveWorkout', { 
-                templateWorkout: { name: 'Pull Day', sets: [
-                  { exerciseName: 'Barbell Row', muscleGroup: 'back' },
-                  { exerciseName: 'Lat Pulldown', muscleGroup: 'back' },
-                  { exerciseName: 'Face Pulls', muscleGroup: 'rear_delts' },
-                  { exerciseName: 'Barbell Curl', muscleGroup: 'biceps' },
-                ]}
-              })}
-            >
-              <MaterialCommunityIcons name={AppIcons.muscle} size={18} color={theme.colors.error} />
-              <Text variant="labelMedium" style={{ color: theme.colors.error }}>Pull</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.tertiary, 0.15) }]}
-              onPress={() => navigation.navigate('ActiveWorkout', { 
-                templateWorkout: { name: 'Legs Day', sets: [
-                  { exerciseName: 'Squat', muscleGroup: 'quads' },
-                  { exerciseName: 'Romanian Deadlift', muscleGroup: 'hamstrings' },
-                  { exerciseName: 'Leg Press', muscleGroup: 'quads' },
-                  { exerciseName: 'Leg Curl', muscleGroup: 'hamstrings' },
-                ]}
-              })}
-            >
-              <MaterialCommunityIcons name={AppIcons.target} size={18} color={theme.colors.tertiary} />
-              <Text variant="labelMedium" style={{ color: theme.colors.tertiary }}>Legs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.templateChip, { backgroundColor: withAlpha(theme.colors.outline, 0.15) }]}
-              onPress={() => navigation.navigate('ActiveWorkout')}
-            >
-              <MaterialCommunityIcons name={AppIcons.edit} size={18} color={theme.colors.outline} />
-              <Text variant="labelMedium" style={{ color: theme.colors.outline }}>Custom</Text>
-            </TouchableOpacity>
-          </View>
-        </Surface>
+        <QuickStartTemplates
+          onStartWorkout={(template) => {
+            if (template) {
+              navigation.navigate('ActiveWorkout', { templateWorkout: template });
+            } else {
+              navigation.navigate('ActiveWorkout');
+            }
+          }}
+        />
 
         {/* Completed Programs History */}
         {mesoState.mesoCycleHistory.filter(m => m.status === 'completed').length > 0 && (
@@ -1224,43 +1027,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         {/* Weekly Volume Summary - Only if has data */}
-        {weeklyVolume.length > 0 && (
-          <Surface style={styles.volumeCard} elevation={1}>
-            <Text variant="titleMedium" style={{ marginBottom: 12 }}>
-              <MaterialCommunityIcons name="chart-bar" size={18} color={theme.colors.onSurface} />{' '}This Week's Volume
-            </Text>
-            <View style={styles.volumeGrid}>
-              {weeklyVolume.map(({ muscle, sets }) => (
-                <View key={muscle} style={styles.volumeItem}>
-                  <Text variant="titleLarge" style={{ color: theme.colors.primary }}>{sets}</Text>
-                  <Text variant="labelSmall" style={{ color: theme.colors.outline, textTransform: 'capitalize' }}>
-                    {muscle}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </Surface>
-        )}
+        <WeeklyVolumeCard volume={weeklyVolume} />
 
         {/* Recent PRs - Only if has PRs */}
-        {recentPRs.length > 0 && (
-          <Surface style={styles.prCard} elevation={1}>
-            <View style={styles.prHeader}>
-              <MaterialCommunityIcons name={AppIcons.pr} size={22} color={statusColors.pr} />
-              <Text variant="titleMedium" style={{ marginLeft: 8 }}>Recent PRs</Text>
-            </View>
-            {recentPRs.slice(0, 3).map((pr, index) => (
-              <View key={index} style={[styles.prItem, { borderTopColor: withAlpha(theme.colors.outline, 0.2) }]}>
-                <Text variant="bodyMedium" style={{ flex: 1 }} numberOfLines={1}>
-                  {pr.exercise}
-                </Text>
-                <Text variant="titleSmall" style={{ color: theme.colors.primary }}>
-                  {pr.weight} × {pr.reps}
-                </Text>
-              </View>
-            ))}
-          </Surface>
-        )}
+        <RecentPRsCard prs={recentPRs} />
       </ScrollView>
 
       {/* Stop Program Confirmation Dialog */}
@@ -1293,162 +1063,20 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       </Portal>
 
       {/* Edit Dialog */}
-      <Portal>
-        <Dialog 
-          visible={!!editingWorkout} 
-          onDismiss={() => setEditingWorkout(null)}
-          style={{ maxHeight: '85%' }}
-        >
-          <Dialog.Title>Edit Workout</Dialog.Title>
-          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
-            <ScrollView style={{ paddingHorizontal: 24 }}>
-              <TextInput
-                label="Workout Name"
-                value={editName}
-                onChangeText={setEditName}
-                mode="outlined"
-                style={{ marginBottom: 16 }}
-              />
-              
-              <Text variant="titleSmall" style={{ marginBottom: 8 }}>Sets</Text>
-              
-              {editSets.length === 0 ? (
-                <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 12 }}>
-                  No sets recorded
-                </Text>
-              ) : (
-                editSets.map((set, index) => (
-                  <View key={set.id} style={styles.editSetRow}>
-                    <Text variant="bodySmall" style={{ flex: 1 }} numberOfLines={1}>
-                      {set.exerciseName}
-                    </Text>
-                    <TextInput
-                      value={set.weight}
-                      onChangeText={(v) => handleUpdateSet(set.id, 'weight', v)}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      dense
-                      style={styles.editSetInput}
-                      placeholder="lbs"
-                    />
-                    <Text style={{ marginHorizontal: 4 }}>×</Text>
-                    <TextInput
-                      value={set.reps}
-                      onChangeText={(v) => handleUpdateSet(set.id, 'reps', v)}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      dense
-                      style={styles.editSetInput}
-                      placeholder="reps"
-                    />
-                    <TouchableOpacity 
-                      onPress={() => setDeleteConfirmSet(set.id)}
-                      style={{ padding: 8 }}
-                    >
-                      <Text style={{ color: theme.colors.error }}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
-              )}
-              
-              {/* Add New Set */}
-              {showAddSet ? (
-                <View style={[styles.addSetForm, { backgroundColor: withAlpha(theme.colors.primary, 0.05) }]}>
-                  <View style={{ position: 'relative', zIndex: 1 }}>
-                    <TextInput
-                      label="Exercise"
-                      value={newSetExercise || exerciseSearch}
-                      onChangeText={(text) => {
-                        setExerciseSearch(text);
-                        setNewSetExercise('');
-                        setShowExerciseDropdown(true);
-                      }}
-                      onFocus={() => setShowExerciseDropdown(true)}
-                      mode="outlined"
-                      dense
-                      placeholder="Search exercises..."
-                      style={{ marginBottom: showExerciseDropdown ? 0 : 8 }}
-                    />
-                    {showExerciseDropdown && (
-                      <Surface style={styles.exerciseDropdown} elevation={3}>
-                        <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
-                          {filteredExercises.map((ex) => (
-                            <TouchableOpacity
-                              key={ex.name}
-                              style={[styles.exerciseOption, { borderBottomColor: withAlpha(theme.colors.outline, 0.2) }]}
-                              onPress={() => {
-                                setNewSetExercise(ex.name);
-                                setExerciseSearch('');
-                                setShowExerciseDropdown(false);
-                              }}
-                            >
-                              <Text variant="bodyMedium">{ex.name}</Text>
-                              <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                                {ex.muscleGroup}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      </Surface>
-                    )}
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                    <TextInput
-                      label="Weight"
-                      value={newSetWeight}
-                      onChangeText={setNewSetWeight}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      dense
-                      style={{ flex: 1 }}
-                    />
-                    <TextInput
-                      label="Reps"
-                      value={newSetReps}
-                      onChangeText={setNewSetReps}
-                      keyboardType="numeric"
-                      mode="outlined"
-                      dense
-                      style={{ flex: 1 }}
-                    />
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Button mode="outlined" onPress={() => {
-                      setShowAddSet(false);
-                      setExerciseSearch('');
-                      setShowExerciseDropdown(false);
-                    }} style={{ flex: 1 }}>
-                      Cancel
-                    </Button>
-                    <Button mode="contained" onPress={handleAddNewSet} style={{ flex: 1 }}>
-                      Add Set
-                    </Button>
-                  </View>
-                </View>
-              ) : (
-                <Button 
-                  mode="outlined" 
-                  onPress={() => {
-                    setShowAddSet(true);
-                    setExerciseSearch('');
-                    setShowExerciseDropdown(false);
-                  }}
-                  style={{ marginTop: 8 }}
-                >
-                  + Add Missing Set
-                </Button>
-              )}
-            </ScrollView>
-          </Dialog.ScrollArea>
-          <Dialog.Actions>
-            <Button onPress={() => setEditingWorkout(null)}>Cancel</Button>
-            <Button onPress={handleSaveEdit}>Save Changes</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <EditWorkoutDialog
+        visible={!!editingWorkout}
+        onDismiss={() => setEditingWorkout(null)}
+        workoutName={editName}
+        onNameChange={setEditName}
+        sets={editSets}
+        onSetsChange={setEditSets}
+        onSave={handleSaveEdit}
+        addSetLabel="+ Add Missing Set"
+      />
 
       {/* Add Past Workout Dialog */}
       <Portal>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Dialog 
           visible={showAddWorkout} 
           onDismiss={() => setShowAddWorkout(false)}
@@ -1456,7 +1084,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         >
           <Dialog.Title>Log Past Workout</Dialog.Title>
           <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
-            <ScrollView style={{ paddingHorizontal: 24 }}>
+            <ScrollView style={{ paddingHorizontal: 24 }} keyboardShouldPersistTaps="handled">
               <TextInput
                 label="Workout Name"
                 value={newWorkoutName}
@@ -1466,14 +1094,12 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
                 style={{ marginBottom: 12 }}
               />
               
-              <TextInput
-                label="Date (YYYY-MM-DD)"
-                value={newWorkoutDate}
-                onChangeText={setNewWorkoutDate}
-                mode="outlined"
-                placeholder="2026-02-08"
-                style={{ marginBottom: 16 }}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 }}>
+                <MaterialCommunityIcons name="calendar" size={18} color={theme.colors.onSurfaceVariant} style={{ marginRight: 8 }} />
+                <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                  Date: {new Date(newWorkoutDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                </Text>
+              </View>
               
               <Text variant="titleSmall" style={{ marginBottom: 8 }}>Sets</Text>
               
@@ -1596,139 +1222,31 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
             </Button>
           </Dialog.Actions>
         </Dialog>
+        </KeyboardAvoidingView>
       </Portal>
 
       {/* Log Cardio Workout Dialog */}
-      <Portal>
-        <Dialog 
-          visible={showLogCardio} 
-          onDismiss={() => setShowLogCardio(false)}
-          style={{ maxHeight: '85%' }}
-        >
-          <Dialog.Title>Log Cardio Workout</Dialog.Title>
-          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
-            <ScrollView style={{ paddingHorizontal: 24 }}>
-              <Text variant="titleSmall" style={{ marginBottom: 8 }}>Cardio Type</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                {CARDIO_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option.type}
-                    onPress={() => setCardioWorkoutType(option.type)}
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 20,
-                      backgroundColor: cardioWorkoutType === option.type 
-                        ? theme.colors.primaryContainer 
-                        : theme.colors.surfaceVariant,
-                      borderWidth: cardioWorkoutType === option.type ? 2 : 0,
-                      borderColor: theme.colors.primary,
-                    }}
-                  >
-                    <Text 
-                      variant="bodyMedium"
-                      style={{ 
-                        color: cardioWorkoutType === option.type 
-                          ? theme.colors.onPrimaryContainer 
-                          : theme.colors.onSurfaceVariant 
-                      }}
-                    >
-                      {option.emoji} {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              
-              <TextInput
-                label="Workout Name (optional)"
-                value={cardioName}
-                onChangeText={setCardioName}
-                mode="outlined"
-                placeholder={`${CARDIO_OPTIONS.find(c => c.type === cardioWorkoutType)?.emoji} ${CARDIO_OPTIONS.find(c => c.type === cardioWorkoutType)?.label}`}
-                style={{ marginBottom: 12 }}
-              />
-              
-              <TextInput
-                label="Date (YYYY-MM-DD)"
-                value={cardioDate}
-                onChangeText={setCardioDate}
-                mode="outlined"
-                placeholder="2026-02-08"
-                style={{ marginBottom: 12 }}
-              />
-              
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <TextInput
-                  label="Duration (min) *"
-                  value={cardioDuration}
-                  onChangeText={setCardioDuration}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  placeholder="30"
-                  style={{ flex: 1 }}
-                />
-                <TextInput
-                  label="Distance (mi)"
-                  value={cardioDistance}
-                  onChangeText={setCardioDistance}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  placeholder="3.1"
-                  style={{ flex: 1 }}
-                />
-              </View>
-              
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                <TextInput
-                  label="Calories Burned"
-                  value={cardioCalories}
-                  onChangeText={setCardioCalories}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  placeholder="250"
-                  style={{ flex: 1 }}
-                />
-                <TextInput
-                  label="Avg Heart Rate"
-                  value={cardioAvgHR}
-                  onChangeText={setCardioAvgHR}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  placeholder="145"
-                  style={{ flex: 1 }}
-                />
-              </View>
-              
-              <TextInput
-                label="Notes (optional)"
-                value={cardioNotes}
-                onChangeText={setCardioNotes}
-                mode="outlined"
-                placeholder="How did it feel?"
-                multiline
-                numberOfLines={3}
-                style={{ marginBottom: 12 }}
-              />
-              
-              {/* Show calculated pace if distance provided */}
-              {cardioDuration && cardioDistance && parseFloat(cardioDistance) > 0 && (
-                <Surface style={{ padding: 12, borderRadius: 8, marginBottom: 12 }} elevation={1}>
-                  <Text variant="bodySmall" style={{ color: theme.colors.outline }}>Calculated Pace</Text>
-                  <Text variant="titleMedium" style={{ color: theme.colors.primary }}>
-                    {formatPace(parseFloat(cardioDuration) / parseFloat(cardioDistance))}
-                  </Text>
-                </Surface>
-              )}
-            </ScrollView>
-          </Dialog.ScrollArea>
-          <Dialog.Actions>
-            <Button onPress={() => setShowLogCardio(false)}>Cancel</Button>
-            <Button onPress={handleSaveCardioWorkout} disabled={!cardioDuration}>
-              Save Cardio
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <LogCardioDialog
+        visible={showLogCardio}
+        onDismiss={() => setShowLogCardio(false)}
+        onSave={(data) => {
+          const cardioWorkout: Workout = {
+            id: Date.now().toString(),
+            name: data.name,
+            date: data.date,
+            dayType: 'cardio',
+            cardioType: data.type,
+            durationMinutes: data.durationMinutes,
+            distanceMiles: data.distance,
+            paceMinPerMile: data.distance && data.distance > 0 ? data.durationMinutes / data.distance : undefined,
+            caloriesBurned: data.calories,
+            avgHeartRate: data.avgHeartRate,
+            notes: data.notes,
+            sets: [],
+          };
+          workoutDispatch({ type: 'COMPLETE_WORKOUT', payload: cardioWorkout });
+        }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Portal>
@@ -1755,113 +1273,24 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       </Portal>
 
       {/* Program Completion Modal */}
-      <Portal>
-        <Dialog visible={showProgramComplete} onDismiss={() => setShowProgramComplete(false)}>
-          <Dialog.Title style={{ textAlign: 'center' }}>Program Complete!</Dialog.Title>
-          <Dialog.Content>
-            {completedProgramStats && (
-              <View style={{ alignItems: 'center' }}>
-                <Text variant="headlineSmall" style={{ marginBottom: 16, color: theme.colors.primary }}>
-                  {completedProgramStats.name}
-                </Text>
-                
-                <Surface style={{ padding: 16, borderRadius: 12, width: '100%', marginBottom: 16 }} elevation={1}>
-                  <Text variant="titleMedium" style={{ marginBottom: 12, textAlign: 'center' }}>Your Progress</Text>
-                  
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 }}>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text variant="headlineMedium" style={{ color: theme.colors.primary }}>
-                        {completedProgramStats.totalWeeks}
-                      </Text>
-                      <Text variant="labelSmall">Weeks</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text variant="headlineMedium" style={{ color: theme.colors.secondary }}>
-                        {completedProgramStats.totalWorkouts}
-                      </Text>
-                      <Text variant="labelSmall">Workouts</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text variant="headlineMedium" style={{ color: theme.colors.tertiary }}>
-                        {completedProgramStats.totalSets}
-                      </Text>
-                      <Text variant="labelSmall">Sets</Text>
-                    </View>
-                  </View>
-                  
-                  <Divider style={{ marginVertical: 8 }} />
-                  
-                  <View style={{ alignItems: 'center' }}>
-                    <Text variant="bodyMedium" style={{ color: theme.colors.outline }}>
-                      Total Volume Lifted
-                    </Text>
-                    <Text variant="headlineSmall" style={{ color: theme.colors.primary }}>
-                      {completedProgramStats.totalVolume.toLocaleString()} lbs
-                    </Text>
-                  </View>
-                </Surface>
-                
-                <Text variant="bodyMedium" style={{ textAlign: 'center', color: theme.colors.outline, marginBottom: 8 }}>
-                  Great job completing your program! Ready for the next challenge?
-                </Text>
-              </View>
-            )}
-          </Dialog.Content>
-          <Dialog.Actions style={{ justifyContent: 'center', gap: 12 }}>
-            <Button
-              mode="outlined"
-              onPress={() => {
-                // Complete and archive the program
-                if (mesoState.activeMesoCycle) {
-                  mesoDispatch({ type: 'COMPLETE_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
-                }
-                setShowProgramComplete(false);
-              }}
-            >
-              View History
-            </Button>
-            <Button
-              mode="contained"
-              onPress={() => {
-                // Complete the program and navigate to pick a new one
-                if (mesoState.activeMesoCycle) {
-                  mesoDispatch({ type: 'COMPLETE_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
-                }
-                setShowProgramComplete(false);
-                navigation.navigate('Programs');
-              }}
-            >
-              Start New Program
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-
-      {/* Delete Set Confirmation Dialog */}
-      <Portal>
-        <Dialog visible={!!deleteConfirmSet} onDismiss={() => setDeleteConfirmSet(null)}>
-          <Dialog.Title>Delete Set?</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">
-              Are you sure you want to delete this set?
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setDeleteConfirmSet(null)}>Cancel</Button>
-            <Button 
-              textColor={theme.colors.error}
-              onPress={() => {
-                if (deleteConfirmSet) {
-                  handleDeleteSet(deleteConfirmSet);
-                  setDeleteConfirmSet(null);
-                }
-              }}
-            >
-              Delete
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <ProgramCompletionDialog
+        visible={showProgramComplete}
+        stats={completedProgramStats}
+        onDismiss={() => setShowProgramComplete(false)}
+        onViewHistory={() => {
+          if (mesoState.activeMesoCycle) {
+            mesoDispatch({ type: 'COMPLETE_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
+          }
+          setShowProgramComplete(false);
+        }}
+        onStartNewProgram={() => {
+          if (mesoState.activeMesoCycle) {
+            mesoDispatch({ type: 'COMPLETE_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
+          }
+          setShowProgramComplete(false);
+          navigation.navigate('Programs');
+        }}
+      />
 
       {/* Delete New Workout Set Confirmation Dialog */}
       <Portal>
