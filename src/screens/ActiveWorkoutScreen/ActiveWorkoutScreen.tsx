@@ -1488,7 +1488,7 @@ export function ActiveWorkoutScreen({ navigation, route }: ActiveWorkoutScreenPr
 
       {/* Exercise Picker Dialog */}
       <Portal>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={showExercisePicker ? 'auto' : 'none'}>
         <Dialog visible={showExercisePicker} onDismiss={() => setShowExercisePicker(false)} style={{ maxHeight: '85%' }}>
           <Dialog.Title>Add Exercise</Dialog.Title>
           <View style={{ paddingHorizontal: 24, paddingBottom: 8 }}>

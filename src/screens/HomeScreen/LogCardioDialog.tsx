@@ -85,7 +85,7 @@ export function LogCardioDialog({ visible, onDismiss, onSave }: LogCardioDialogP
 
   return (
     <Portal>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={visible ? 'auto' : 'none'}>
       <Dialog visible={visible} onDismiss={resetAndDismiss} style={{ maxHeight: '85%' }}>
         <Dialog.Title>Log Cardio Workout</Dialog.Title>
         <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>

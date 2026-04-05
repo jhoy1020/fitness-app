@@ -1039,7 +1039,7 @@ export function CreateProgramScreen({ navigation, route }: CreateProgramScreenPr
 
       {/* Add Exercise Dialog */}
       <Portal>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={showAddExercise ? 'auto' : 'none'}>
         <Dialog 
           visible={showAddExercise} 
           onDismiss={() => setShowAddExercise(false)}

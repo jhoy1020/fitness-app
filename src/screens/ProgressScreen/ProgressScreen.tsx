@@ -449,7 +449,7 @@ export function ProgressScreen({ navigation }: ProgressScreenProps) {
 
       {/* Weight Entry Dialog */}
       <Portal>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={showWeightEntry ? 'auto' : 'none'}>
         <Dialog visible={showWeightEntry} onDismiss={() => setShowWeightEntry(false)}>
           <Dialog.Title>Log Weight</Dialog.Title>
           <Dialog.Content>

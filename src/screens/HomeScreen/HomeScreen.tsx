@@ -48,7 +48,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   // Add past workout state
   const [showAddWorkout, setShowAddWorkout] = useState(false);
   const [newWorkoutName, setNewWorkoutName] = useState('');
-  const [newWorkoutDate, setNewWorkoutDate] = useState('');
+  const [newWorkoutDate, setNewWorkoutDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newWorkoutSets, setNewWorkoutSets] = useState<EditableSet[]>([]);
   const [addingSetToNew, setAddingSetToNew] = useState(false);
   const [newWkSetExercise, setNewWkSetExercise] = useState('');
@@ -1076,7 +1076,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
 
       {/* Add Past Workout Dialog */}
       <Portal>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={showAddWorkout ? 'auto' : 'none'}>
         <Dialog 
           visible={showAddWorkout} 
           onDismiss={() => setShowAddWorkout(false)}
@@ -1097,7 +1097,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 }}>
                 <MaterialCommunityIcons name="calendar" size={18} color={theme.colors.onSurfaceVariant} style={{ marginRight: 8 }} />
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
-                  Date: {new Date(newWorkoutDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                  Date: {newWorkoutDate
+                    ? new Date(newWorkoutDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+                    : 'Today'}
                 </Text>
               </View>
               

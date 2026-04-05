@@ -39,7 +39,7 @@ export function PlateCalculatorDialog({
 
   return (
     <Portal>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={visible ? 'auto' : 'none'}>
       <Dialog visible={visible} onDismiss={onDismiss}>
         <Dialog.Title>Plate Calculator</Dialog.Title>
         <Dialog.Content>

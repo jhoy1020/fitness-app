@@ -531,7 +531,7 @@ export function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       {/* Add 1RM Dialog */}
       <Portal>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} pointerEvents={show1RMDialog ? 'auto' : 'none'}>
         <Dialog visible={show1RMDialog} onDismiss={() => setShow1RMDialog(false)}>
           <Dialog.Title>Add 1RM Record</Dialog.Title>
           <Dialog.Content>
