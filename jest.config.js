@@ -5,9 +5,12 @@ module.exports = {
     '<rootDir>/jest.setup.ts',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|react-native-paper|react-native-vector-icons|react-native-safe-area-context|@react-native-async-storage/async-storage|uuid)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|react-native-paper|react-native-vector-icons|react-native-safe-area-context|@react-native-async-storage/async-storage|uuid|msw|@mswjs/.*|@bundled-es-modules/.*|@open-draft/.*|until-async|outvariant|headers-polyfill|is-node-process|strict-event-emitter|rettime|tough-cookie|cookie)',
   ],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  transform: {
+    '\\.m?[jt]sx?$': ['babel-jest', { caller: { name: 'metro', bundler: 'metro', platform: 'ios' } }],
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'json', 'node'],
   collectCoverage: true,
   collectCoverageFrom: [
     'src/components/**/*.{ts,tsx}',

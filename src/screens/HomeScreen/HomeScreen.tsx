@@ -7,7 +7,7 @@ import { Text, Button, Surface, useTheme, Divider, Portal, Dialog, TextInput, Pr
 import { TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useWorkout, useUser, useMesoCycle } from '../../context';
-import { WorkoutCard, ProgramCard, PausedWorkoutCard } from '../../components';
+import { WorkoutCard, ProgramCard, PausedWorkoutCard, ConfirmDialog } from '../../components';
 import { getAllExercises, getSetsByWorkoutId } from '../../services/db';
 import { calculate1RM_Epley, getWeekTemplate } from '../../utils/formulas/formulas';
 import { EXERCISE_LIBRARY } from '../../services/db/exerciseLibrary';
@@ -522,7 +522,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     weekStart.setHours(0, 0, 0, 0);
     
     const days = [];
-    const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
     
     for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
@@ -728,7 +728,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               
               return (
                 <View key={index} style={styles.dayColumn}>
-                  <Text variant="labelSmall" style={{ color: theme.colors.outline }}>
+                  <Text
+                    variant="labelSmall"
+                    style={{ color: theme.colors.outline, textAlign: 'center', minWidth: 22 }}
+                  >
                     {day.dayName}
                   </Text>
                   <View style={[
@@ -1034,33 +1037,25 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       </ScrollView>
 
       {/* Stop Program Confirmation Dialog */}
-      <Portal>
-        <Dialog visible={showStopProgramDialog} onDismiss={() => setShowStopProgramDialog(false)}>
-          <Dialog.Title>Stop Program?</Dialog.Title>
-          <Dialog.Content>
-            <Text variant="bodyMedium">
-              Are you sure you want to stop "{mesoState.activeMesoCycle?.name}"?
-            </Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.outline, marginTop: 8 }}>
-              You're on Week {mesoState.activeMesoCycle?.currentWeek} of {mesoState.activeMesoCycle?.totalWeeks} with {mesoState.activeMesoCycle?.completedWorkouts || 0} workouts completed. This cannot be undone.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setShowStopProgramDialog(false)}>Cancel</Button>
-            <Button 
-              textColor={theme.colors.error}
-              onPress={() => {
-                if (mesoState.activeMesoCycle) {
-                  mesoDispatch({ type: 'ABANDON_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
-                }
-                setShowStopProgramDialog(false);
-              }}
-            >
-              Stop Program
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <ConfirmDialog
+        visible={showStopProgramDialog}
+        title="Stop Program?"
+        message={
+          mesoState.activeMesoCycle
+            ? `Are you sure you want to stop "${mesoState.activeMesoCycle.name}"? ` +
+              `You're on Week ${mesoState.activeMesoCycle.currentWeek} of ${mesoState.activeMesoCycle.totalWeeks} ` +
+              `with ${mesoState.activeMesoCycle.completedWorkouts || 0} workouts completed. This cannot be undone.`
+            : 'Are you sure you want to stop this program? This cannot be undone.'
+        }
+        confirmLabel="Stop Program"
+        onConfirm={() => {
+          if (mesoState.activeMesoCycle) {
+            mesoDispatch({ type: 'ABANDON_MESOCYCLE', payload: mesoState.activeMesoCycle.id });
+          }
+          setShowStopProgramDialog(false);
+        }}
+        onDismiss={() => setShowStopProgramDialog(false)}
+      />
 
       {/* Edit Dialog */}
       <EditWorkoutDialog
@@ -1641,6 +1636,7 @@ const styles = StyleSheet.create({
   dayColumn: {
     alignItems: 'center',
     gap: 6,
+    minWidth: 44,
   },
   dayCircle: {
     width: 44,

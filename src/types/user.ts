@@ -11,8 +11,14 @@ export type ActivityLevel =
   | 'active'         // 6-7 days/week
   | 'very_active';   // 2x per day or physical job
 
+export type TrainingExperience = 'beginner' | 'intermediate' | 'advanced';
+
 export interface UserProfile {
   id: string;
+  // Optional display name shown on the profile screen avatar/header.
+  // Distinct from the auth-layer `displayName` below — this is the
+  // user-editable nickname surfaced in the profile form.
+  name?: string;
   weight: number;
   weightUnit: 'lbs' | 'kg';
   height: number;
@@ -23,8 +29,14 @@ export interface UserProfile {
   leanMass?: number;
   bmrOverride?: number;
   activityLevel: ActivityLevel;
+  // Goals
   goalBodyFatPercent?: number;
+  // Target body weight in the same units as `weight`. Used by Activity & Goals.
+  goalWeight?: number;
   goalType: GoalType;
+  // Self-reported training experience — drives default volume / progression
+  // suggestions. Intermediate is the seed default.
+  trainingExperience?: TrainingExperience;
   createdAt: string;
   updatedAt: string;
 

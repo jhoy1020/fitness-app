@@ -10,10 +10,40 @@ import { Provider as PaperProvider, ActivityIndicator, Text, Surface, useTheme }
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { lightTheme, darkTheme, NARROW_SCREEN_WIDTH, withAlpha, spacing } from './src/theme';
+import { lightTheme, darkTheme, withAlpha, spacing } from './src/theme';
+
+// Tab bar narrow-screen breakpoint.
+//
+// The shared theme `NARROW_SCREEN_WIDTH` (400) was originally used here too,
+// but at 400px iPhone 13 mini (375pt), iPhone SE 2nd/3rd gen (375pt), and
+// many compact Android devices fell below the threshold and were forced
+// into a hamburger menu — a measurable hit to navigation discoverability vs.
+// visible tabs on a 5-destination app.
+//
+// 340 keeps real phones on the visible tab bar and only collapses to the
+// hamburger sheet on genuinely tiny widths (original iPhone SE 1st gen at
+// 320pt, narrow split-screen / foldable inner edges).
+//
+// TODO(nav): A richer fix would render a 3-icon "primary + More sheet" tab
+// bar at narrow widths so users still see direct entry points for Home /
+// Programs / Profile. That requires reworking the Tab.Navigator's
+// tabBarStyle + a synthetic More tab and was deferred to keep this change
+// surgical.
+const TAB_BAR_HAMBURGER_BREAKPOINT = 340;
 import { AppIcons } from './src/theme/icons';
-import { WorkoutProvider, UserProvider, TimerProvider, MesoCycleProvider, ThemeProvider, useThemeMode } from './src/context';
+import {
+  WorkoutProvider,
+  UserProvider,
+  TimerProvider,
+  MesoCycleProvider,
+  ThemeProvider,
+  AuthProvider,
+  DatabaseProvider,
+  useAuth,
+  useThemeMode,
+} from './src/context';
 import { initDatabase, seedExercises, EXERCISE_LIBRARY } from './src/services/db';
+import { FEATURE_FLAGS } from './src/config/featureFlags';
 import type { RootStackParamList, MainTabParamList } from './src/navigation';
 import {
   HomeScreen,
@@ -28,6 +58,7 @@ import {
   CreateProgramScreen,
   WorkoutDetailScreen,
   OneRepMaxTestScreen,
+  LoginScreen,
 } from './src/screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -139,7 +170,7 @@ function HamburgerMenu({ navigation, currentRoute }: { navigation: any; currentR
 // Main Tab Navigator with responsive layout
 function MainTabs() {
   const { width } = useWindowDimensions();
-  const isNarrowScreen = width < NARROW_SCREEN_WIDTH;
+  const isNarrowScreen = width < TAB_BAR_HAMBURGER_BREAKPOINT;
   const insets = useSafeAreaInsets();
 
   // For narrow screens, we'll use a custom tab bar with hamburger menu
@@ -280,6 +311,59 @@ function RootNavigator() {
   );
 }
 
+// Auth Stack Navigator — rendered when the user is not authenticated.
+// LoginScreen is full-screen here (no `presentation: 'modal'`); successful
+// auth flips `useAuth().isAuthenticated`, which causes AppContent to swap
+// in the main RootNavigator below.
+function AuthNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// Auth-aware navigation switch. Lives inside AuthProvider so it can read
+// useAuth(); renders the auth stack until the user is authenticated, then
+// swaps in the main app stack. Re-renders automatically when auth state
+// flips, so LoginScreen no longer needs to call navigation.goBack().
+function NavigationGate() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 16 }}>Signing you in...</Text>
+      </View>
+    );
+  }
+
+  // When auth is gated off, the auth stack is unreachable — every launch
+  // lands directly in the main app. AuthProvider stays mounted so any
+  // remaining useAuth() readers get a stable null-user state.
+  if (!FEATURE_FLAGS.authAndAccount) {
+    return (
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      {isAuthenticated ? <RootNavigator /> : <AuthNavigator />}
+    </NavigationContainer>
+  );
+}
+
 // App Component with Theme Toggle Support
 function AppContent() {
   const { isDark } = useThemeMode();
@@ -294,10 +378,16 @@ function AppContent() {
 
   const initializeApp = async () => {
     try {
-      // Initialize database
-      await initDatabase();
+      // Start the mock API layer before anything else makes a network call.
+      if (__DEV__) {
+        const { startMockApi } = await import('./src/mocks/start');
+        await startMockApi();
+      }
 
-      // Seed exercise library
+      // TODO: Consolidate DB init paths. Today the legacy services/db memory
+      // store (initDatabase + seedExercises) runs here while DatabaseProvider
+      // owns the SQLite path. Pick one and migrate the rest in a follow-up.
+      await initDatabase();
       await seedExercises(EXERCISE_LIBRARY);
 
       setIsLoading(false);
@@ -331,23 +421,27 @@ function AppContent() {
 
   return (
     <PaperProvider theme={theme}>
-      <UserProvider>
-        <WorkoutProvider>
-          <TimerProvider>
-            <MesoCycleProvider>
-              <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-              >
-                <NavigationContainer>
-                  <RootNavigator />
-                </NavigationContainer>
-              </KeyboardAvoidingView>
-            </MesoCycleProvider>
-          </TimerProvider>
-        </WorkoutProvider>
-      </UserProvider>
+      <AuthProvider>
+        {/* DatabaseProvider sits above the data-consuming providers so they
+            can eventually read repos via useDatabase(). */}
+        <DatabaseProvider>
+          <UserProvider>
+            <WorkoutProvider>
+              <TimerProvider>
+                <MesoCycleProvider>
+                  <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+                  >
+                    <NavigationGate />
+                  </KeyboardAvoidingView>
+                </MesoCycleProvider>
+              </TimerProvider>
+            </WorkoutProvider>
+          </UserProvider>
+        </DatabaseProvider>
+      </AuthProvider>
     </PaperProvider>
   );
 }

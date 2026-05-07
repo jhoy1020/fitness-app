@@ -26,6 +26,12 @@ import {
 } from '../services/db';
 import { generateUUID, toISODate } from '../utils';
 
+// AsyncStorage keys owned by this context. Exported so other modules
+// (e.g. dev seeders) can hydrate the same slot without re-declaring the
+// literal — keeps this file the single source of truth.
+export const WORKOUT_HISTORY_STORAGE_KEY = 'fitness_workout_history';
+export const PAUSED_WORKOUT_STORAGE_KEY = 'fitness_paused_workout';
+
 // Initial state
 const initialState: WorkoutState = {
   activeWorkout: null,
@@ -153,7 +159,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
     case 'COMPLETE_WORKOUT':
       // Save workout to history and persist to storage
       const newHistory = [action.payload, ...state.workoutHistory];
-      Storage.setItem('fitness_workout_history', JSON.stringify(newHistory)).catch(e => {
+      Storage.setItem(WORKOUT_HISTORY_STORAGE_KEY, JSON.stringify(newHistory)).catch(e => {
         console.error('Failed to save workout history:', e);
       });
       return {
@@ -165,7 +171,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
 
     case 'DELETE_WORKOUT':
       const filteredHistory = state.workoutHistory.filter(w => w.id !== action.payload);
-      Storage.setItem('fitness_workout_history', JSON.stringify(filteredHistory)).catch(e => {
+      Storage.setItem(WORKOUT_HISTORY_STORAGE_KEY, JSON.stringify(filteredHistory)).catch(e => {
         console.error('Failed to save workout history:', e);
       });
       return {
@@ -177,7 +183,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
       const updatedHistory = state.workoutHistory.map(w => 
         w.id === action.payload.id ? { ...w, ...action.payload.updates } : w
       );
-      Storage.setItem('fitness_workout_history', JSON.stringify(updatedHistory)).catch(e => {
+      Storage.setItem(WORKOUT_HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory)).catch(e => {
         console.error('Failed to save workout history:', e);
       });
       return {
@@ -186,7 +192,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
       };
 
     case 'PAUSE_WORKOUT':
-      Storage.setItem('fitness_paused_workout', JSON.stringify(action.payload)).catch(e => {
+      Storage.setItem(PAUSED_WORKOUT_STORAGE_KEY, JSON.stringify(action.payload)).catch(e => {
         console.error('Failed to save paused workout:', e);
       });
       return {
@@ -195,7 +201,7 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
       };
 
     case 'CLEAR_PAUSED_WORKOUT':
-      Storage.removeItem('fitness_paused_workout').catch(e => {
+      Storage.removeItem(PAUSED_WORKOUT_STORAGE_KEY).catch(e => {
         console.error('Failed to clear paused workout:', e);
       });
       return {
@@ -289,7 +295,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadWorkoutHistory = async () => {
       try {
-        const savedHistory = await Storage.getItem('fitness_workout_history');
+        const savedHistory = await Storage.getItem(WORKOUT_HISTORY_STORAGE_KEY);
         if (savedHistory) {
           const history = JSON.parse(savedHistory);
           dispatch({ type: 'LOAD_HISTORY', payload: history });
@@ -298,7 +304,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         console.error('Failed to load workout history:', e);
       }
       try {
-        const savedPaused = await Storage.getItem('fitness_paused_workout');
+        const savedPaused = await Storage.getItem(PAUSED_WORKOUT_STORAGE_KEY);
         if (savedPaused) {
           const paused = JSON.parse(savedPaused);
           dispatch({ type: 'PAUSE_WORKOUT', payload: paused });

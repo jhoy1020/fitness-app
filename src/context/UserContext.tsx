@@ -20,8 +20,15 @@ import {
 } from '../services/db';
 import { calculateNutrition } from '../utils';
 
-const WEIGHT_HISTORY_KEY = 'fitness_app_weight_history';
-const ONE_REP_MAX_KEY = 'fitness_app_one_rep_max';
+// AsyncStorage keys owned by this context. Exported so other modules
+// (e.g. dev seeders) can hydrate the same slot without re-declaring the
+// literal — keeps this file the single source of truth.
+export const WEIGHT_HISTORY_STORAGE_KEY = 'fitness_app_weight_history';
+export const ONE_REP_MAX_STORAGE_KEY = 'fitness_app_one_rep_max';
+
+// Local aliases preserved for in-file readability.
+const WEIGHT_HISTORY_KEY = WEIGHT_HISTORY_STORAGE_KEY;
+const ONE_REP_MAX_KEY = ONE_REP_MAX_STORAGE_KEY;
 
 // Initial state
 const initialState: UserState = {
@@ -136,7 +143,7 @@ interface UserContextType {
   addWeightEntry: (weight: number, bodyFatPercent?: number) => void;
   loadWeightHistory: () => void;
   // 1RM functions
-  addOneRepMax: (exerciseName: string, weight: number, method: 'tested' | 'calculated', notes?: string) => void;
+  addOneRepMax: (exerciseName: string, weight: number, method: 'tested' | 'calculated', notes?: string, unit?: 'lbs' | 'kg') => void;
   updateOneRepMax: (record: OneRepMaxRecord) => void;
   deleteOneRepMax: (id: string) => void;
   getOneRepMax: (exerciseName: string) => OneRepMaxRecord | undefined;
@@ -249,12 +256,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [state.profile]);
 
   // 1RM Helper Functions
-  const addOneRepMax = useCallback((exerciseName: string, weight: number, method: 'tested' | 'calculated', notes?: string) => {
+  const addOneRepMax = useCallback((exerciseName: string, weight: number, method: 'tested' | 'calculated', notes?: string, unit: 'lbs' | 'kg' = 'lbs') => {
     const record: OneRepMaxRecord = {
       id: Date.now().toString(),
       exerciseName,
       weight,
-      unit: 'lbs',
+      unit,
       testedDate: new Date().toISOString(),
       method,
       notes,

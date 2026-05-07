@@ -1,6 +1,3 @@
-// Tests for ProfileScreen
-// These tests verify the ProfileScreen module structure and exports
-
 describe('ProfileScreen', () => {
   describe('module structure', () => {
     it('exports ProfileScreen component', () => {

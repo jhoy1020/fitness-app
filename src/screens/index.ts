@@ -10,3 +10,4 @@ export { MesoCycleScreen } from './MesoCycleScreen/MesoCycleScreen';
 export { CreateProgramScreen } from './CreateProgramScreen/CreateProgramScreen';
 export { WorkoutDetailScreen } from './WorkoutDetailScreen/WorkoutDetailScreen';
 export { OneRepMaxTestScreen } from './OneRepMaxTestScreen/OneRepMaxTestScreen';
+export { LoginScreen } from './LoginScreen/LoginScreen';

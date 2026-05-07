@@ -7,3 +7,5 @@ export { ProgramCard } from './ProgramCard/ProgramCard';
 export { PausedWorkoutCard } from './PausedWorkoutCard/PausedWorkoutCard';
 export { EditWorkoutDialog } from './EditWorkoutDialog/EditWorkoutDialog';
 export type { EditableSet } from './EditWorkoutDialog/EditWorkoutDialog';
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmDialogProps } from './ConfirmDialog';

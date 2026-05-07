@@ -67,3 +67,14 @@ beforeAll(() => {
 afterAll(() => {
   console.warn = originalWarn;
 });
+
+// MSW server lifecycle — see src/mocks/node.ts
+import { server } from './src/mocks/node';
+import { resetMockDb } from './src/mocks/db';
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
+afterEach(() => {
+  server.resetHandlers();
+  resetMockDb();
+});
+afterAll(() => server.close());
